@@ -10,15 +10,24 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            font-family: monospace;
         }
         canvas {
             background: #000;
         }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            color: #666;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <canvas id="game" width="800" height="600"></canvas>
+    <canvas id="game" width="1600" height="1200" style="width: 800px; height: 600px;"></canvas>
+    <div class="controls">
+        Left: W/S &nbsp;&nbsp;&nbsp; Right: ↑/↓
+    </div>
     <script type="module" src="pong.js"></script>
 </body>
 </html>
-
