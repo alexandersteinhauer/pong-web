@@ -8,16 +8,16 @@
 
 	type Mode = 'select' | 'creating' | 'joining' | 'playing';
 
-	let mode: Mode = $state('select');
+	let mode = $state<Mode>('select');
 	let roomCode = $state('');
 	let joinCode = $state('');
-	let status: ConnectionStatus = $state('connecting');
+	let status = $state<ConnectionStatus>('connecting');
 	let error = $state<string | null>(null);
 	let transport: PongTransport | null = null;
 
-	let side: 'left' | 'right' | null = $state(null);
-	let countdown: number | null = $state(null);
-	let winner: number | null = $state(null);
+	let side = $state<'left' | 'right' | null>(null);
+	let countdown = $state<number | null>(null);
+	let winner = $state<number | null>(null);
 	let intentionalDisconnect = false;
 
 	let gameState = $state<GameState>({

@@ -12,7 +12,7 @@
 	} from '$lib/game/local';
 	import type { Game } from '$lib/game/wasm';
 
-	let game: Game | null = $state(null);
+	let game = $state<Game | null>(null);
 	let running = $state(false);
 	let winner = $state<number>(-1);
 	let loading = $state(true);
