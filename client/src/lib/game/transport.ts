@@ -1,13 +1,15 @@
-// Server -> Client message types
+// Server -> Client message types (reliable stream)
 export const MSG_ASSIGN_LEFT = 0;
 export const MSG_ASSIGN_RIGHT = 1;
-export const MSG_STATE = 2;
 export const MSG_OPPONENT_LEFT = 3;
 export const MSG_ROOM_CODE = 4;
 export const MSG_JOIN_FAILED = 5;
 export const MSG_COUNTDOWN = 6;
 export const MSG_GAME_OVER = 7;
 export const MSG_WAITING = 8;
+
+// Server -> Client message types (datagram)
+export const MSG_STATE = 2;
 
 export type ConnectionStatus =
 	| 'connecting'
@@ -42,7 +44,7 @@ const CERT_HASH = 'eode/DS1WZRnplL5G82Oqxyvdx/DoUOy5tbqKz5ee1c=';
 
 export class PongTransport {
 	private transport: WebTransport | null = null;
-	private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
+	private datagramWriter: WritableStreamDefaultWriter<Uint8Array> | null = null;
 	private callbacks: TransportCallbacks;
 	private running = false;
 
@@ -76,7 +78,7 @@ export class PongTransport {
 			await this.transport.ready;
 			console.log('Connected to server');
 
-			this.writer = this.transport.datagrams.writable.getWriter();
+			this.datagramWriter = this.transport.datagrams.writable.getWriter();
 			this.running = true;
 
 			// Handle transport close
@@ -90,8 +92,11 @@ export class PongTransport {
 					this.running = false;
 				});
 
-			// Start reading messages
-			this.readLoop();
+			// Start reading datagrams (game state)
+			this.readDatagrams();
+
+			// Start reading reliable streams (control messages)
+			this.readStreams();
 		} catch (err) {
 			console.error('Connection failed:', err);
 			this.callbacks.onStatusChange('disconnected');
@@ -99,7 +104,7 @@ export class PongTransport {
 		}
 	}
 
-	private async readLoop(): Promise<void> {
+	private async readDatagrams(): Promise<void> {
 		if (!this.transport) return;
 
 		const reader = this.transport.datagrams.readable.getReader();
@@ -110,16 +115,74 @@ export class PongTransport {
 				if (done) break;
 				if (!value || value.length === 0) continue;
 
-				this.handleMessage(value);
+				// Only game state comes via datagrams
+				if (value[0] === MSG_STATE) {
+					this.callbacks.onGameState(this.decodeState(value));
+				}
 			}
 		} catch (err) {
-			console.error('Read error:', err);
+			console.error('Datagram read error:', err);
 		} finally {
 			reader.releaseLock();
 		}
 	}
 
-	private handleMessage(data: Uint8Array): void {
+	private async readStreams(): Promise<void> {
+		if (!this.transport) return;
+
+		const reader = this.transport.incomingUnidirectionalStreams.getReader();
+
+		try {
+			while (this.running) {
+				const { value: stream, done } = await reader.read();
+				if (done) break;
+				if (!stream) continue;
+
+				// Read the stream in a separate task
+				this.handleIncomingStream(stream);
+			}
+		} catch (err) {
+			console.error('Stream read error:', err);
+		} finally {
+			reader.releaseLock();
+		}
+	}
+
+	private async handleIncomingStream(stream: ReadableStream<Uint8Array>): Promise<void> {
+		const streamReader = stream.getReader();
+		const chunks: Uint8Array[] = [];
+
+		try {
+			while (true) {
+				const { value, done } = await streamReader.read();
+				if (done) break;
+				if (value) chunks.push(value);
+			}
+
+			// Combine all chunks
+			const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+			const data = new Uint8Array(totalLength);
+			let offset = 0;
+			for (const chunk of chunks) {
+				data.set(chunk, offset);
+				offset += chunk.length;
+			}
+
+			// Parse: 2 bytes length prefix + message
+			if (data.length >= 2) {
+				const msgData = data.slice(2); // Skip length prefix
+				this.handleReliableMessage(msgData);
+			}
+		} catch (err) {
+			console.error('Stream handling error:', err);
+		} finally {
+			streamReader.releaseLock();
+		}
+	}
+
+	private handleReliableMessage(data: Uint8Array): void {
+		if (data.length === 0) return;
+
 		const msgType = data[0];
 
 		switch (msgType) {
@@ -131,26 +194,23 @@ export class PongTransport {
 				this.callbacks.onSideAssigned('right');
 				break;
 
-			case MSG_STATE:
-				this.callbacks.onGameState(this.decodeState(data));
-				break;
-
 			case MSG_OPPONENT_LEFT:
 				this.callbacks.onStatusChange('opponent_left');
 				this.running = false;
 				break;
 
-			case MSG_ROOM_CODE:
+			case MSG_ROOM_CODE: {
 				const code = new TextDecoder().decode(data.slice(1));
 				this.callbacks.onRoomCode(code);
 				break;
+			}
 
 			case MSG_JOIN_FAILED:
 				this.callbacks.onStatusChange('join_failed');
 				this.running = false;
 				break;
 
-			case MSG_COUNTDOWN:
+			case MSG_COUNTDOWN: {
 				const seconds = data[1];
 				this.callbacks.onCountdown(seconds);
 				if (seconds > 0) {
@@ -159,12 +219,14 @@ export class PongTransport {
 					this.callbacks.onStatusChange('playing');
 				}
 				break;
+			}
 
-			case MSG_GAME_OVER:
+			case MSG_GAME_OVER: {
 				const winner = data[1];
 				this.callbacks.onGameOver(winner);
 				this.callbacks.onStatusChange('game_over');
 				break;
+			}
 
 			case MSG_WAITING:
 				this.callbacks.onStatusChange('waiting');
@@ -185,10 +247,11 @@ export class PongTransport {
 	}
 
 	sendInput(input: number): void {
-		if (!this.writer) return;
+		if (!this.datagramWriter) return;
 
+		// Input sent via datagram (unreliable, fast)
 		const data = new Int8Array([input]);
-		this.writer.write(new Uint8Array(data.buffer)).catch(() => {
+		this.datagramWriter.write(new Uint8Array(data.buffer)).catch(() => {
 			// Ignore write errors
 		});
 	}
@@ -199,7 +262,6 @@ export class PongTransport {
 			this.transport.close();
 			this.transport = null;
 		}
-		this.writer = null;
+		this.datagramWriter = null;
 	}
 }
-
