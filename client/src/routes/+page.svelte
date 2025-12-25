@@ -4,13 +4,10 @@
 
 <div class="flex min-h-screen flex-col items-center justify-center gap-12 p-8">
 	<header class="text-center">
-		<h1 class="flex flex-col gap-2">
-			<span
-				class="bg-gradient-to-b from-white to-neutral-500 bg-clip-text text-7xl font-bold tracking-[0.3em] text-transparent"
-			>
-				PONG
-			</span>
-			<span class="text-sm uppercase tracking-[0.2em] text-cyan-400">WebTransport Edition</span>
+		<h1
+			class="bg-gradient-to-b from-white to-neutral-500 bg-clip-text text-7xl font-bold tracking-[0.3em] text-transparent"
+		>
+			PONG
 		</h1>
 	</header>
 

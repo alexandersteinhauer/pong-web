@@ -34,6 +34,8 @@
 	const scaledWidth = $derived(FIELD_WIDTH * scale);
 	const scaledHeight = $derived(FIELD_HEIGHT * scale);
 
+	const overlayLines = $derived(overlay ? overlay.split('\n') : []);
+
 	onMount(() => {
 		ctx = canvas.getContext('2d');
 		if (ctx) {
@@ -84,60 +86,61 @@
 		ctx.shadowBlur = 10;
 		ctx.fillRect(state.ballX, state.ballY, BALL_SIZE, BALL_SIZE);
 		ctx.shadowBlur = 0;
-
-		// Scores
-		ctx.fillStyle = '#666';
-		ctx.font = 'bold 72px "Space Mono", monospace';
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'top';
-		ctx.fillText(String(state.leftScore), FIELD_WIDTH / 4, 30);
-		ctx.fillText(String(state.rightScore), (3 * FIELD_WIDTH) / 4, 30);
-
-		// Player indicator
-		if (playerSide) {
-			ctx.font = '14px "Space Mono", monospace';
-			ctx.fillStyle = '#22d3ee';
-			ctx.textBaseline = 'bottom';
-			const sideText = playerSide === 'left' ? 'You: Left (W/S)' : 'You: Right (↑/↓)';
-			ctx.fillText(sideText, FIELD_WIDTH / 2, FIELD_HEIGHT - 15);
-		}
-
-		// Countdown overlay
-		if (countdown !== null && countdown > 0) {
-			ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-			ctx.fillRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
-
-			ctx.fillStyle = '#22d3ee';
-			ctx.font = 'bold 120px "Space Mono", monospace';
-			ctx.textAlign = 'center';
-			ctx.textBaseline = 'middle';
-			ctx.fillText(String(countdown), FIELD_WIDTH / 2, FIELD_HEIGHT / 2);
-		}
-
-		// Text overlay (for messages like "Waiting...", "Game Over", etc.)
-		if (overlay) {
-			ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-			ctx.fillRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
-
-			ctx.fillStyle = '#fff';
-			ctx.font = 'bold 32px "Space Mono", monospace';
-			ctx.textAlign = 'center';
-			ctx.textBaseline = 'middle';
-
-			// Handle multiline overlay
-			const lines = overlay.split('\n');
-			const lineHeight = 45;
-			const startY = FIELD_HEIGHT / 2 - ((lines.length - 1) * lineHeight) / 2;
-			lines.forEach((line, i) => {
-				ctx!.fillText(line, FIELD_WIDTH / 2, startY + i * lineHeight);
-			});
-		}
 	});
 </script>
 
-<canvas
-	bind:this={canvas}
-	width={scaledWidth}
-	height={scaledHeight}
-	class="block rounded border-2 border-neutral-800 bg-[#0a0a0a]"
-></canvas>
+<div class="flex flex-col items-center gap-4">
+	<!-- Score display -->
+	<div class="flex w-full items-center justify-center gap-8 font-mono">
+		<div class="flex flex-col items-center gap-1">
+			<span class="text-xs uppercase tracking-widest text-neutral-500">Player 1</span>
+			<span class="text-6xl font-bold tabular-nums text-neutral-400 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+				{state.leftScore}
+			</span>
+		</div>
+		<span class="text-3xl text-neutral-700">:</span>
+		<div class="flex flex-col items-center gap-1">
+			<span class="text-xs uppercase tracking-widest text-neutral-500">Player 2</span>
+			<span class="text-6xl font-bold tabular-nums text-neutral-400 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+				{state.rightScore}
+			</span>
+		</div>
+	</div>
+
+	<!-- Canvas wrapper with overlay -->
+	<div class="relative">
+		<canvas
+			bind:this={canvas}
+			width={scaledWidth}
+			height={scaledHeight}
+			class="block rounded border-2 border-neutral-800 bg-[#0a0a0a]"
+		></canvas>
+
+		<!-- Countdown overlay -->
+		{#if countdown !== null && countdown > 0}
+			<div class="absolute inset-0 flex items-center justify-center rounded bg-black/70">
+				<span class="font-mono text-[120px] font-bold text-cyan-400 drop-shadow-[0_0_40px_rgba(34,211,238,0.5)]">
+					{countdown}
+				</span>
+			</div>
+		{/if}
+
+		<!-- Text overlay -->
+		{#if overlay}
+			<div class="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-black/70">
+				{#each overlayLines as line}
+					<span class="font-mono text-3xl font-bold text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+						{line}
+					</span>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Player indicator -->
+	{#if playerSide}
+		<div class="font-mono text-sm text-cyan-400">
+			{playerSide === 'left' ? 'You: Left (W/S)' : 'You: Right (↑/↓)'}
+		</div>
+	{/if}
+</div>
