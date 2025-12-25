@@ -28,6 +28,8 @@ export interface GameState {
   rightPaddleY: number;
   leftScore: number;
   rightScore: number;
+  waitingForServe: boolean;
+  servingSide: number;
 }
 
 export interface TransportCallbacks {
@@ -255,6 +257,8 @@ export class PongTransport {
       rightPaddleY: view.getFloat64(25, true),
       leftScore: data[33],
       rightScore: data[34],
+      waitingForServe: data[35] === 1,
+      servingSide: view.getInt8(36),
     };
   }
 

@@ -26,6 +26,8 @@
     rightPaddleY: 250,
     leftScore: 0,
     rightScore: 0,
+    waitingForServe: false,
+    servingSide: -1,
   });
 
   const keys = createKeyState();
@@ -53,6 +55,8 @@
       rightPaddleY: game.right_paddle_y,
       leftScore: game.left_score,
       rightScore: game.right_score,
+      waitingForServe: game.waiting_for_serve,
+      servingSide: game.serving_side,
     };
   }
 
@@ -131,6 +135,26 @@
       startGame();
     }
 
+    // Launch ball when waiting for serve
+    if (running && game && gameState.waitingForServe) {
+      // Left player serves with W or S
+      if (
+        gameState.servingSide === 0 &&
+        (e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S")
+      ) {
+        game.launch_ball(0);
+        updateGameState();
+      }
+      // Right player serves with arrows
+      if (
+        gameState.servingSide === 1 &&
+        (e.key === "ArrowUp" || e.key === "ArrowDown")
+      ) {
+        game.launch_ball(1);
+        updateGameState();
+      }
+    }
+
     // Back to menu on Escape
     if (e.key === "Escape") {
       goto("/");
@@ -166,6 +190,17 @@
       const x = touch.clientX - rect.left;
       const relativeX = x / rect.width;
       const gameY = screenToGameY(touch.clientY, rect);
+
+      // Handle serve launch on touch
+      if (gameState.waitingForServe) {
+        if (gameState.servingSide === 0 && relativeX < 0.5) {
+          game.launch_ball(0);
+          updateGameState();
+        } else if (gameState.servingSide === 1 && relativeX >= 0.5) {
+          game.launch_ball(1);
+          updateGameState();
+        }
+      }
 
       // Left half controls left paddle, right half controls right paddle
       if (relativeX < 0.5 && leftTouchId === null) {
@@ -244,6 +279,16 @@
     }
     if (!running)
       return isTouchDevice ? "Tap to start" : "Press SPACE to start";
+    if (gameState.waitingForServe) {
+      const serverName = gameState.servingSide === 0 ? "Player 1" : "Player 2";
+      if (isTouchDevice) {
+        const side = gameState.servingSide === 0 ? "left" : "right";
+        return `${serverName}'s serve\n\nTap ${side} side`;
+      } else {
+        const keys = gameState.servingSide === 0 ? "W/S" : "↑/↓";
+        return `${serverName}'s serve\n\nPress ${keys}`;
+      }
+    }
     return null;
   });
 </script>

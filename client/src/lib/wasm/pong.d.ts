@@ -5,6 +5,12 @@ export class Game {
   free(): void;
   [Symbol.dispose](): void;
   field_width(): number;
+  /**
+   * Launch the ball - called by the serving player
+   * side: 0 = left, 1 = right
+   * Returns true if the serve was accepted
+   */
+  launch_ball(side: number): boolean;
   field_height(): number;
   is_game_over(): boolean;
   paddle_width(): number;
@@ -22,12 +28,21 @@ export class Game {
   ball_y: number;
   ball_vx: number;
   ball_vy: number;
+  ball_speed: number;
   left_paddle_y: number;
   right_paddle_y: number;
   left_paddle_input: number;
   right_paddle_input: number;
   left_score: number;
   right_score: number;
+  /**
+   * True when waiting for the losing player to serve
+   */
+  waiting_for_serve: boolean;
+  /**
+   * Which side should serve: 0 = left, 1 = right
+   */
+  serving_side: number;
 }
 
 export type InitInput =
@@ -40,6 +55,7 @@ export type InitInput =
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_game_free: (a: number, b: number) => void;
+  readonly __wbg_get_game_ball_speed: (a: number) => number;
   readonly __wbg_get_game_ball_vx: (a: number) => number;
   readonly __wbg_get_game_ball_vy: (a: number) => number;
   readonly __wbg_get_game_ball_x: (a: number) => number;
@@ -50,6 +66,9 @@ export interface InitOutput {
   readonly __wbg_get_game_right_paddle_input: (a: number) => number;
   readonly __wbg_get_game_right_paddle_y: (a: number) => number;
   readonly __wbg_get_game_right_score: (a: number) => number;
+  readonly __wbg_get_game_serving_side: (a: number) => number;
+  readonly __wbg_get_game_waiting_for_serve: (a: number) => number;
+  readonly __wbg_set_game_ball_speed: (a: number, b: number) => void;
   readonly __wbg_set_game_ball_vx: (a: number, b: number) => void;
   readonly __wbg_set_game_ball_vy: (a: number, b: number) => void;
   readonly __wbg_set_game_ball_x: (a: number, b: number) => void;
@@ -60,10 +79,13 @@ export interface InitOutput {
   readonly __wbg_set_game_right_paddle_input: (a: number, b: number) => void;
   readonly __wbg_set_game_right_paddle_y: (a: number, b: number) => void;
   readonly __wbg_set_game_right_score: (a: number, b: number) => void;
+  readonly __wbg_set_game_serving_side: (a: number, b: number) => void;
+  readonly __wbg_set_game_waiting_for_serve: (a: number, b: number) => void;
   readonly game_ball_size: (a: number) => number;
   readonly game_field_height: (a: number) => number;
   readonly game_field_width: (a: number) => number;
   readonly game_is_game_over: (a: number) => number;
+  readonly game_launch_ball: (a: number, b: number) => number;
   readonly game_new: () => number;
   readonly game_paddle_height: (a: number) => number;
   readonly game_paddle_offset: (a: number) => number;

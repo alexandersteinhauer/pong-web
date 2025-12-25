@@ -109,6 +109,19 @@ export class Game {
   /**
    * @returns {number}
    */
+  get ball_speed() {
+    const ret = wasm.__wbg_get_game_ball_speed(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+   * @param {number} arg0
+   */
+  set ball_speed(arg0) {
+    wasm.__wbg_set_game_ball_speed(this.__wbg_ptr, arg0);
+  }
+  /**
+   * @returns {number}
+   */
   get left_paddle_y() {
     const ret = wasm.__wbg_get_game_left_paddle_y(this.__wbg_ptr);
     return ret;
@@ -185,11 +198,52 @@ export class Game {
     wasm.__wbg_set_game_right_score(this.__wbg_ptr, arg0);
   }
   /**
+   * True when waiting for the losing player to serve
+   * @returns {boolean}
+   */
+  get waiting_for_serve() {
+    const ret = wasm.__wbg_get_game_waiting_for_serve(this.__wbg_ptr);
+    return ret !== 0;
+  }
+  /**
+   * True when waiting for the losing player to serve
+   * @param {boolean} arg0
+   */
+  set waiting_for_serve(arg0) {
+    wasm.__wbg_set_game_waiting_for_serve(this.__wbg_ptr, arg0);
+  }
+  /**
+   * Which side should serve: 0 = left, 1 = right
+   * @returns {number}
+   */
+  get serving_side() {
+    const ret = wasm.__wbg_get_game_serving_side(this.__wbg_ptr);
+    return ret;
+  }
+  /**
+   * Which side should serve: 0 = left, 1 = right
+   * @param {number} arg0
+   */
+  set serving_side(arg0) {
+    wasm.__wbg_set_game_serving_side(this.__wbg_ptr, arg0);
+  }
+  /**
    * @returns {number}
    */
   field_width() {
     const ret = wasm.game_field_width(this.__wbg_ptr);
     return ret;
+  }
+  /**
+   * Launch the ball - called by the serving player
+   * side: 0 = left, 1 = right
+   * Returns true if the serve was accepted
+   * @param {number} side
+   * @returns {boolean}
+   */
+  launch_ball(side) {
+    const ret = wasm.game_launch_ball(this.__wbg_ptr, side);
+    return ret !== 0;
   }
   /**
    * @returns {number}

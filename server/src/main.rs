@@ -288,10 +288,20 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
                 last_tick = Instant::now();
 
                 while let Ok(input) = left_input_rx.try_recv() {
-                    game.left_paddle_input = input as f64;
+                    // Input 2 means launch ball (if it's left player's turn to serve)
+                    if input == 2 {
+                        game.launch_ball(0);
+                    } else {
+                        game.left_paddle_input = input as f64;
+                    }
                 }
                 while let Ok(input) = right_input_rx.try_recv() {
-                    game.right_paddle_input = input as f64;
+                    // Input 2 means launch ball (if it's right player's turn to serve)
+                    if input == 2 {
+                        game.launch_ball(1);
+                    } else {
+                        game.right_paddle_input = input as f64;
+                    }
                 }
 
                 game.update(dt);
@@ -319,7 +329,7 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
 }
 
 fn encode_state(game: &Game) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(35);
+    let mut buf = Vec::with_capacity(37);
     buf.push(MSG_STATE);
     buf.extend_from_slice(&game.ball_x.to_le_bytes());
     buf.extend_from_slice(&game.ball_y.to_le_bytes());
@@ -327,5 +337,7 @@ fn encode_state(game: &Game) -> Vec<u8> {
     buf.extend_from_slice(&game.right_paddle_y.to_le_bytes());
     buf.push(game.left_score as u8);
     buf.push(game.right_score as u8);
+    buf.push(if game.waiting_for_serve { 1 } else { 0 });
+    buf.push(game.serving_side as u8);
     buf
 }

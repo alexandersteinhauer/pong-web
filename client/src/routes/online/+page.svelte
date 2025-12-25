@@ -32,6 +32,8 @@
     rightPaddleY: (FIELD_HEIGHT - PADDLE_HEIGHT) / 2,
     leftScore: 0,
     rightScore: 0,
+    waitingForServe: false,
+    servingSide: -1,
   });
 
   const keys = { up: false, down: false };
@@ -53,19 +55,35 @@
       if (e.key === "w" || e.key === "W") {
         keys.up = true;
         e.preventDefault();
+        // Also trigger serve if waiting
+        if (gameState.waitingForServe && gameState.servingSide === 0) {
+          transport?.sendInput(2); // 2 = launch ball
+        }
       }
       if (e.key === "s" || e.key === "S") {
         keys.down = true;
         e.preventDefault();
+        // Also trigger serve if waiting
+        if (gameState.waitingForServe && gameState.servingSide === 0) {
+          transport?.sendInput(2); // 2 = launch ball
+        }
       }
     } else if (side === "right") {
       if (e.key === "ArrowUp") {
         keys.up = true;
         e.preventDefault();
+        // Also trigger serve if waiting
+        if (gameState.waitingForServe && gameState.servingSide === 1) {
+          transport?.sendInput(2); // 2 = launch ball
+        }
       }
       if (e.key === "ArrowDown") {
         keys.down = true;
         e.preventDefault();
+        // Also trigger serve if waiting
+        if (gameState.waitingForServe && gameState.servingSide === 1) {
+          transport?.sendInput(2); // 2 = launch ball
+        }
       }
     }
 
@@ -124,6 +142,15 @@
     if (!touch) return;
 
     canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+    // Handle serve launch on touch
+    if (gameState.waitingForServe) {
+      const mySide = side === "left" ? 0 : 1;
+      if (gameState.servingSide === mySide) {
+        transport?.sendInput(2); // 2 = launch ball
+      }
+    }
+
     activeTouch = touch.identifier;
     touchTargetY = screenToGameY(touch.clientY, canvasRect);
   }
@@ -330,6 +357,22 @@
       return isWinner
         ? `You Win!\n\n${leaveHint}`
         : `You Lose!\n\n${leaveHint}`;
+    }
+
+    // Show serve prompt when waiting
+    if (gameState.waitingForServe && status === "playing") {
+      const mySide = side === "left" ? 0 : 1;
+      const isMyServe = gameState.servingSide === mySide;
+      if (isMyServe) {
+        if (isTouchDevice) {
+          return "Your serve\n\nTap to launch";
+        } else {
+          const keys = side === "left" ? "W/S" : "↑/↓";
+          return `Your serve\n\nPress ${keys}`;
+        }
+      } else {
+        return "Opponent's serve...";
+      }
     }
     return null;
   });
