@@ -1,5 +1,6 @@
 use anyhow::Result;
 use pong::Game;
+use prost::Message;
 use rand::Rng;
 use std::collections::HashMap;
 use std::env;
@@ -12,22 +13,16 @@ use wtransport::Endpoint;
 use wtransport::Identity;
 use wtransport::ServerConfig;
 
+// Include generated protobuf code
+pub mod proto {
+    include!(concat!(env!("OUT_DIR"), "/pong.rs"));
+}
+
+use proto::*;
+
 const TICK_RATE: f64 = 60.0;
 const TICK_DURATION: Duration = Duration::from_nanos((1_000_000_000.0 / TICK_RATE) as u64);
-const COUNTDOWN_SECONDS: u8 = 5;
-
-// Server -> Client messages (reliable stream)
-const MSG_ASSIGN_LEFT: u8 = 0;
-const MSG_ASSIGN_RIGHT: u8 = 1;
-const MSG_OPPONENT_LEFT: u8 = 3;
-const MSG_ROOM_CODE: u8 = 4;
-const MSG_JOIN_FAILED: u8 = 5;
-const MSG_COUNTDOWN: u8 = 6;
-const MSG_GAME_OVER: u8 = 7;
-const MSG_WAITING: u8 = 8;
-
-// Server -> Client messages (datagram - game state only)
-const MSG_STATE: u8 = 2;
+const COUNTDOWN_SECONDS: u32 = 5;
 
 struct Room {
     creator: Connection,
@@ -98,7 +93,7 @@ async fn handle_connection(conn: Connection, path: String, rooms: RoomManager) {
 }
 
 /// Send a reliable message over a unidirectional stream
-async fn send_reliable(conn: &Connection, msg: &[u8]) -> bool {
+async fn send_reliable(conn: &Connection, msg: &ServerMessage) -> bool {
     let stream = match conn.open_uni().await {
         Ok(opening) => match opening.await {
             Ok(s) => s,
@@ -108,11 +103,12 @@ async fn send_reliable(conn: &Connection, msg: &[u8]) -> bool {
     };
 
     let mut stream = stream;
+    let encoded = msg.encode_to_vec();
     // Write length prefix (2 bytes) + message
-    let len = msg.len() as u16;
-    let mut buf = Vec::with_capacity(2 + msg.len());
+    let len = encoded.len() as u16;
+    let mut buf = Vec::with_capacity(2 + encoded.len());
     buf.extend_from_slice(&len.to_le_bytes());
-    buf.extend_from_slice(msg);
+    buf.extend_from_slice(&encoded);
     if stream.write_all(&buf).await.is_err() {
         return false;
     }
@@ -124,15 +120,21 @@ async fn handle_create_room(conn: Connection, rooms: RoomManager) {
     let code = generate_room_code();
 
     // Send room code to creator (reliable)
-    let mut msg = vec![MSG_ROOM_CODE];
-    msg.extend_from_slice(code.as_bytes());
+    let msg = ServerMessage {
+        payload: Some(server_message::Payload::RoomCode(RoomCode {
+            code: code.clone(),
+        })),
+    };
     if !send_reliable(&conn, &msg).await {
         eprintln!("Failed to send room code");
         return;
     }
 
     // Send waiting status (reliable)
-    if !send_reliable(&conn, &[MSG_WAITING]).await {
+    let msg = ServerMessage {
+        payload: Some(server_message::Payload::Waiting(Waiting {})),
+    };
+    if !send_reliable(&conn, &msg).await {
         eprintln!("Failed to send waiting status");
         return;
     }
@@ -153,19 +155,22 @@ async fn handle_join_room(conn: Connection, code: String, rooms: RoomManager) {
         }
         None => {
             println!("Room {} not found", code);
-            send_reliable(&conn, &[MSG_JOIN_FAILED]).await;
+            let msg = ServerMessage {
+                payload: Some(server_message::Payload::JoinFailed(JoinFailed {})),
+            };
+            send_reliable(&conn, &msg).await;
         }
     }
 }
 
 struct PlayerConnection {
     conn: Arc<Connection>,
-    reliable_tx: mpsc::Sender<Vec<u8>>,
+    reliable_tx: mpsc::Sender<ServerMessage>,
 }
 
 impl PlayerConnection {
     fn new(conn: Arc<Connection>) -> Self {
-        let (reliable_tx, mut reliable_rx) = mpsc::channel::<Vec<u8>>(32);
+        let (reliable_tx, mut reliable_rx) = mpsc::channel::<ServerMessage>(32);
 
         // Spawn a task to send reliable messages sequentially
         let conn_clone = conn.clone();
@@ -173,10 +178,11 @@ impl PlayerConnection {
             while let Some(msg) = reliable_rx.recv().await {
                 if let Ok(opening) = conn_clone.open_uni().await {
                     if let Ok(mut stream) = opening.await {
-                        let len = msg.len() as u16;
-                        let mut buf = Vec::with_capacity(2 + msg.len());
+                        let encoded = msg.encode_to_vec();
+                        let len = encoded.len() as u16;
+                        let mut buf = Vec::with_capacity(2 + encoded.len());
                         buf.extend_from_slice(&len.to_le_bytes());
-                        buf.extend_from_slice(&msg);
+                        buf.extend_from_slice(&encoded);
                         let _ = stream.write_all(&buf).await;
                         let _ = stream.finish().await;
                     }
@@ -187,7 +193,7 @@ impl PlayerConnection {
         Self { conn, reliable_tx }
     }
 
-    async fn send_reliable(&self, msg: Vec<u8>) -> bool {
+    async fn send_reliable(&self, msg: ServerMessage) -> bool {
         self.reliable_tx.send(msg).await.is_ok()
     }
 
@@ -201,20 +207,39 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
     let right = PlayerConnection::new(Arc::new(right_conn));
 
     // Assign sides (reliable)
-    if !left.send_reliable(vec![MSG_ASSIGN_LEFT]).await {
+    let left_msg = ServerMessage {
+        payload: Some(server_message::Payload::AssignSide(AssignSide {
+            side: Side::Left as i32,
+        })),
+    };
+    if !left.send_reliable(left_msg).await {
         println!("Left player disconnected before game start");
-        let _ = right.send_reliable(vec![MSG_OPPONENT_LEFT]).await;
+        let msg = ServerMessage {
+            payload: Some(server_message::Payload::OpponentLeft(OpponentLeft {})),
+        };
+        let _ = right.send_reliable(msg).await;
         return;
     }
-    if !right.send_reliable(vec![MSG_ASSIGN_RIGHT]).await {
+
+    let right_msg = ServerMessage {
+        payload: Some(server_message::Payload::AssignSide(AssignSide {
+            side: Side::Right as i32,
+        })),
+    };
+    if !right.send_reliable(right_msg).await {
         println!("Right player disconnected before game start");
-        let _ = left.send_reliable(vec![MSG_OPPONENT_LEFT]).await;
+        let msg = ServerMessage {
+            payload: Some(server_message::Payload::OpponentLeft(OpponentLeft {})),
+        };
+        let _ = left.send_reliable(msg).await;
         return;
     }
 
     // Countdown (reliable)
     for i in (1..=COUNTDOWN_SECONDS).rev() {
-        let msg = vec![MSG_COUNTDOWN, i];
+        let msg = ServerMessage {
+            payload: Some(server_message::Payload::Countdown(Countdown { seconds: i })),
+        };
         if !left.send_reliable(msg.clone()).await || !right.send_reliable(msg).await {
             println!("Player disconnected during countdown");
             return;
@@ -223,14 +248,16 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
     }
 
     // Start signal - countdown 0 (reliable)
-    let start_msg = vec![MSG_COUNTDOWN, 0];
+    let start_msg = ServerMessage {
+        payload: Some(server_message::Payload::Countdown(Countdown { seconds: 0 })),
+    };
     if !left.send_reliable(start_msg.clone()).await || !right.send_reliable(start_msg).await {
         println!("Player disconnected at game start");
         return;
     }
 
-    let (left_input_tx, mut left_input_rx) = mpsc::channel::<i8>(16);
-    let (right_input_tx, mut right_input_rx) = mpsc::channel::<i8>(16);
+    let (left_input_tx, mut left_input_rx) = mpsc::channel::<i32>(16);
+    let (right_input_tx, mut right_input_rx) = mpsc::channel::<i32>(16);
     let (disconnect_tx, mut disconnect_rx) = mpsc::channel::<&str>(2);
 
     // Read input datagrams from left player
@@ -240,8 +267,9 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
         loop {
             match left_reader.receive_datagram().await {
                 Ok(data) if !data.is_empty() => {
-                    let input = data[0] as i8;
-                    let _ = left_input_tx.send(input).await;
+                    if let Ok(input) = PlayerInput::decode(&data[..]) {
+                        let _ = left_input_tx.send(input.direction).await;
+                    }
                 }
                 _ => {
                     let _ = disconnect_tx_left.send("left").await;
@@ -258,8 +286,9 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
         loop {
             match right_reader.receive_datagram().await {
                 Ok(data) if !data.is_empty() => {
-                    let input = data[0] as i8;
-                    let _ = right_input_tx.send(input).await;
+                    if let Ok(input) = PlayerInput::decode(&data[..]) {
+                        let _ = right_input_tx.send(input.direction).await;
+                    }
                 }
                 _ => {
                     let _ = disconnect_tx_right.send("right").await;
@@ -276,10 +305,13 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
         tokio::select! {
             Some(who) = disconnect_rx.recv() => {
                 println!("{} player disconnected", who);
+                let msg = ServerMessage {
+                    payload: Some(server_message::Payload::OpponentLeft(OpponentLeft {})),
+                };
                 if who == "left" {
-                    let _ = right.send_reliable(vec![MSG_OPPONENT_LEFT]).await;
+                    let _ = right.send_reliable(msg).await;
                 } else {
-                    let _ = left.send_reliable(vec![MSG_OPPONENT_LEFT]).await;
+                    let _ = left.send_reliable(msg).await;
                 }
                 break;
             }
@@ -309,9 +341,13 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
                 // Check for game over (send reliably)
                 if game.is_game_over() {
                     let winner = game.winner();
-                    let game_over_msg = vec![MSG_GAME_OVER, winner as u8];
-                    let _ = left.send_reliable(game_over_msg.clone()).await;
-                    let _ = right.send_reliable(game_over_msg).await;
+                    let msg = ServerMessage {
+                        payload: Some(server_message::Payload::GameOver(GameOver {
+                            winner: if winner == 0 { Side::Left as i32 } else { Side::Right as i32 },
+                        })),
+                    };
+                    let _ = left.send_reliable(msg.clone()).await;
+                    let _ = right.send_reliable(msg).await;
                     println!("Game over! Winner: {}", if winner == 0 { "left" } else { "right" });
                     break;
                 }
@@ -329,15 +365,15 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
 }
 
 fn encode_state(game: &Game) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(37);
-    buf.push(MSG_STATE);
-    buf.extend_from_slice(&game.ball_x.to_le_bytes());
-    buf.extend_from_slice(&game.ball_y.to_le_bytes());
-    buf.extend_from_slice(&game.left_paddle_y.to_le_bytes());
-    buf.extend_from_slice(&game.right_paddle_y.to_le_bytes());
-    buf.push(game.left_score as u8);
-    buf.push(game.right_score as u8);
-    buf.push(if game.waiting_for_serve { 1 } else { 0 });
-    buf.push(game.serving_side as u8);
-    buf
+    let state = GameState {
+        ball_x: game.ball_x as f32,
+        ball_y: game.ball_y as f32,
+        left_paddle_y: game.left_paddle_y as f32,
+        right_paddle_y: game.right_paddle_y as f32,
+        left_score: game.left_score as u32,
+        right_score: game.right_score as u32,
+        waiting_for_serve: game.waiting_for_serve,
+        serving_side: game.serving_side as i32,
+    };
+    state.encode_to_vec()
 }

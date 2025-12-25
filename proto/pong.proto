@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package pong;
+
+// === Server -> Client Messages (Reliable Stream) ===
+
+message ServerMessage {
+  oneof payload {
+    AssignSide assign_side = 1;
+    RoomCode room_code = 2;
+    Waiting waiting = 3;
+    Countdown countdown = 4;
+    GameOver game_over = 5;
+    JoinFailed join_failed = 6;
+    OpponentLeft opponent_left = 7;
+  }
+}
+
+enum Side {
+  LEFT = 0;
+  RIGHT = 1;
+}
+
+message AssignSide {
+  Side side = 1;
+}
+
+message RoomCode {
+  string code = 1;
+}
+
+message Waiting {}
+
+message Countdown {
+  uint32 seconds = 1;
+}
+
+message GameOver {
+  Side winner = 1;
+}
+
+message JoinFailed {}
+
+message OpponentLeft {}
+
+// === Server -> Client Messages (Datagram) ===
+
+message GameState {
+  float ball_x = 1;
+  float ball_y = 2;
+  float left_paddle_y = 3;
+  float right_paddle_y = 4;
+  uint32 left_score = 5;
+  uint32 right_score = 6;
+  bool waiting_for_serve = 7;
+  Side serving_side = 8;
+}
+
+// === Client -> Server Messages (Datagram) ===
+
+message PlayerInput {
+  // -1 = up, 0 = stop, 1 = down, 2 = launch ball
+  sint32 direction = 1;
+}
+

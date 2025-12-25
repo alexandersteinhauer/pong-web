@@ -11,8 +11,9 @@
 
 1. The client/server need to communicate using WebTransport.
 2. Game state should be transported using datagrams, otherwise use reliable channels through WebTransport.
-3. The core game logic needs to written in Rust/WASM so the client and server have the exact same implementation of the game.4
-4. The client needs to be written in SvelteKit with Svelte 5.
+3. Use Protobuf to exchange binary messages.
+4. The core game logic needs to written in Rust/WASM so the client and server have the exact same implementation of the game.4
+5. The client needs to be written in SvelteKit with Svelte 5.
 
 ## Game Logic
 

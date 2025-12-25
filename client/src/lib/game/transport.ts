@@ -1,15 +1,4 @@
-// Server -> Client message types (reliable stream)
-export const MSG_ASSIGN_LEFT = 0;
-export const MSG_ASSIGN_RIGHT = 1;
-export const MSG_OPPONENT_LEFT = 3;
-export const MSG_ROOM_CODE = 4;
-export const MSG_JOIN_FAILED = 5;
-export const MSG_COUNTDOWN = 6;
-export const MSG_GAME_OVER = 7;
-export const MSG_WAITING = 8;
-
-// Server -> Client message types (datagram)
-export const MSG_STATE = 2;
+import { pong } from "$lib/proto/pong";
 
 export type ConnectionStatus =
   | "connecting"
@@ -127,9 +116,21 @@ export class PongTransport {
         if (done) break;
         if (!value || value.length === 0) continue;
 
-        // Only game state comes via datagrams
-        if (value[0] === MSG_STATE) {
-          this.callbacks.onGameState(this.decodeState(value));
+        // Decode GameState protobuf message
+        try {
+          const state = pong.GameState.decode(value);
+          this.callbacks.onGameState({
+            ballX: state.ballX,
+            ballY: state.ballY,
+            leftPaddleY: state.leftPaddleY,
+            rightPaddleY: state.rightPaddleY,
+            leftScore: state.leftScore,
+            rightScore: state.rightScore,
+            waitingForServe: state.waitingForServe,
+            servingSide: state.servingSide,
+          });
+        } catch (e) {
+          console.error("Failed to decode game state:", e);
         }
       }
     } catch (err) {
@@ -197,77 +198,71 @@ export class PongTransport {
   private handleReliableMessage(data: Uint8Array): void {
     if (data.length === 0) return;
 
-    const msgType = data[0];
+    try {
+      const msg = pong.ServerMessage.decode(data);
 
-    switch (msgType) {
-      case MSG_ASSIGN_LEFT:
-        this.callbacks.onSideAssigned("left");
-        break;
+      switch (msg.payload) {
+        case "assignSide":
+          if (msg.assignSide) {
+            const side =
+              msg.assignSide.side === pong.Side.LEFT ? "left" : "right";
+            this.callbacks.onSideAssigned(side);
+          }
+          break;
 
-      case MSG_ASSIGN_RIGHT:
-        this.callbacks.onSideAssigned("right");
-        break;
+        case "roomCode":
+          if (msg.roomCode?.code) {
+            this.callbacks.onRoomCode(msg.roomCode.code);
+          }
+          break;
 
-      case MSG_OPPONENT_LEFT:
-        this.callbacks.onStatusChange("opponent_left");
-        this.running = false;
-        break;
+        case "waiting":
+          this.callbacks.onStatusChange("waiting");
+          break;
 
-      case MSG_ROOM_CODE: {
-        const code = new TextDecoder().decode(data.slice(1));
-        this.callbacks.onRoomCode(code);
-        break;
+        case "countdown":
+          if (msg.countdown) {
+            const seconds = msg.countdown.seconds ?? 0;
+            this.callbacks.onCountdown(seconds);
+            if (seconds > 0) {
+              this.callbacks.onStatusChange("countdown");
+            } else {
+              this.callbacks.onStatusChange("playing");
+            }
+          }
+          break;
+
+        case "gameOver":
+          if (msg.gameOver) {
+            const winner = msg.gameOver.winner === pong.Side.LEFT ? 0 : 1;
+            this.callbacks.onGameOver(winner);
+            this.callbacks.onStatusChange("game_over");
+          }
+          break;
+
+        case "joinFailed":
+          this.callbacks.onStatusChange("join_failed");
+          this.running = false;
+          break;
+
+        case "opponentLeft":
+          this.callbacks.onStatusChange("opponent_left");
+          this.running = false;
+          break;
       }
-
-      case MSG_JOIN_FAILED:
-        this.callbacks.onStatusChange("join_failed");
-        this.running = false;
-        break;
-
-      case MSG_COUNTDOWN: {
-        const seconds = data[1];
-        this.callbacks.onCountdown(seconds);
-        if (seconds > 0) {
-          this.callbacks.onStatusChange("countdown");
-        } else {
-          this.callbacks.onStatusChange("playing");
-        }
-        break;
-      }
-
-      case MSG_GAME_OVER: {
-        const winner = data[1];
-        this.callbacks.onGameOver(winner);
-        this.callbacks.onStatusChange("game_over");
-        break;
-      }
-
-      case MSG_WAITING:
-        this.callbacks.onStatusChange("waiting");
-        break;
+    } catch (e) {
+      console.error("Failed to decode server message:", e);
     }
-  }
-
-  private decodeState(data: Uint8Array): GameState {
-    const view = new DataView(data.buffer, data.byteOffset);
-    return {
-      ballX: view.getFloat64(1, true),
-      ballY: view.getFloat64(9, true),
-      leftPaddleY: view.getFloat64(17, true),
-      rightPaddleY: view.getFloat64(25, true),
-      leftScore: data[33],
-      rightScore: data[34],
-      waitingForServe: data[35] === 1,
-      servingSide: view.getInt8(36),
-    };
   }
 
   sendInput(input: number): void {
     if (!this.datagramWriter) return;
 
-    // Input sent via datagram (unreliable, fast)
-    const data = new Int8Array([input]);
-    this.datagramWriter.write(new Uint8Array(data.buffer)).catch(() => {
+    // Encode PlayerInput as protobuf
+    const msg = pong.PlayerInput.create({ direction: input });
+    const data = pong.PlayerInput.encode(msg).finish();
+
+    this.datagramWriter.write(data).catch(() => {
       // Ignore write errors
     });
   }
