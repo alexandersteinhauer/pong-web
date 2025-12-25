@@ -8,7 +8,7 @@ const PADDLE_OFFSET: f64 = 20.0;
 const PADDLE_SPEED: f64 = 600.0;
 const BALL_SIZE: f64 = 10.0;
 const INITIAL_BALL_SPEED: f64 = 400.0;
-const BALL_SPEED_INCREMENT: f64 = 50.0;
+const BALL_SPEED_INCREMENT: f64 = 20.0;
 const MAX_BOUNCE_ANGLE: f64 = std::f64::consts::PI / 3.0; // 60 degrees
 const WINNING_SCORE: u32 = 7;
 
@@ -243,7 +243,8 @@ impl Game {
                             // Calculate relative hit position (-1 to 1)
                             let ball_center_y = self.ball_y + BALL_SIZE / 2.0;
                             let paddle_center_y = paddle_y + PADDLE_HEIGHT / 2.0;
-                            let relative_hit = ((ball_center_y - paddle_center_y) / (PADDLE_HEIGHT / 2.0))
+                            let relative_hit = ((ball_center_y - paddle_center_y)
+                                / (PADDLE_HEIGHT / 2.0))
                                 .clamp(-1.0, 1.0);
 
                             // Increase ball speed
@@ -254,7 +255,11 @@ impl Game {
                             let bounce_angle = relative_hit * MAX_BOUNCE_ANGLE;
 
                             // Direction: left paddle sends ball right (+1), right paddle sends ball left (-1)
-                            let direction = if hit_type == HitType::LeftPaddle { 1.0 } else { -1.0 };
+                            let direction = if hit_type == HitType::LeftPaddle {
+                                1.0
+                            } else {
+                                -1.0
+                            };
 
                             self.ball_vx = self.ball_speed * bounce_angle.cos() * direction;
                             self.ball_vy = self.ball_speed * bounce_angle.sin();
@@ -310,7 +315,7 @@ impl Game {
         if !self.waiting_for_serve || self.serving_side != side {
             return false;
         }
-        
+
         // Ball goes at 0 degrees (horizontal) towards the server (loser)
         // Left player (0) serves towards left (negative x), right player (1) serves towards right (positive x)
         let direction = if side == 0 { -1.0 } else { 1.0 };

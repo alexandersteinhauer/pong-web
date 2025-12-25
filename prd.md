@@ -19,6 +19,6 @@
 
 1. The game finishes when one player reaches a score of 7.
 2. The ball should begin with a speed of 400.
-   2.1. After it's hit by a paddle, its speed should increase by 50. There's no cap to its speed.
+   2.1. After it's hit by a paddle, its speed should increase by 20. There's no cap to its speed.
 3. The angle of the ball should be determined by where it hit the paddle. If the ball hit the paddle at the middle, it's output angle equals the input angle. When it's hit by the paddle edge, it's steered towards the wall. The max. output angle should be capped at +-60 degrees though.
 4. When one player scores, the game should pause. The loser then launches the ball (using space or a touch tap) at a 0 degree angle towards himself.
