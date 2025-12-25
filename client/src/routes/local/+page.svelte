@@ -135,24 +135,10 @@
       startGame();
     }
 
-    // Launch ball when waiting for serve
-    if (running && game && gameState.waitingForServe) {
-      // Left player serves with W or S
-      if (
-        gameState.servingSide === 0 &&
-        (e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S")
-      ) {
-        game.launch_ball(0);
-        updateGameState();
-      }
-      // Right player serves with arrows
-      if (
-        gameState.servingSide === 1 &&
-        (e.key === "ArrowUp" || e.key === "ArrowDown")
-      ) {
-        game.launch_ball(1);
-        updateGameState();
-      }
+    // Launch ball when waiting for serve (space bar for both players)
+    if (running && game && gameState.waitingForServe && e.key === " ") {
+      game.launch_ball(gameState.servingSide);
+      updateGameState();
     }
 
     // Back to menu on Escape
@@ -285,8 +271,7 @@
         const side = gameState.servingSide === 0 ? "left" : "right";
         return `${serverName}'s serve\n\nTap ${side} side`;
       } else {
-        const keys = gameState.servingSide === 0 ? "W/S" : "↑/↓";
-        return `${serverName}'s serve\n\nPress ${keys}`;
+        return `${serverName}'s serve\n\nPress SPACE`;
       }
     }
     return null;
