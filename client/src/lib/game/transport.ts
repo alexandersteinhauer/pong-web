@@ -39,8 +39,12 @@ export interface TransportCallbacks {
   onGameOver: (winner: number) => void;
 }
 
-// Certificate hash for local development (you'll need to update this with your cert hash)
+// Server URL - use environment variable in production
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://localhost:4433";
+
+// Certificate hash for local development only (not needed with real CA certs)
 const CERT_HASH = "eode/DS1WZRnplL5G82Oqxyvdx/DoUOy5tbqKz5ee1c=";
+const USE_CERT_HASH = SERVER_URL.includes("localhost");
 
 export class PongTransport {
   private transport: WebTransport | null = null;
@@ -64,16 +68,22 @@ export class PongTransport {
     this.callbacks.onStatusChange("connecting");
 
     try {
-      const url = `https://localhost:4433${path}`;
+      const url = `${SERVER_URL}${path}`;
 
-      this.transport = new WebTransport(url, {
-        serverCertificateHashes: [
-          {
-            algorithm: "sha-256",
-            value: Uint8Array.from(atob(CERT_HASH), (c) => c.charCodeAt(0)),
-          },
-        ],
-      });
+      // Only use certificate hash for localhost (self-signed certs)
+      // Production uses real CA certs from Let's Encrypt
+      const options: WebTransportOptions = USE_CERT_HASH
+        ? {
+            serverCertificateHashes: [
+              {
+                algorithm: "sha-256",
+                value: Uint8Array.from(atob(CERT_HASH), (c) => c.charCodeAt(0)),
+              },
+            ],
+          }
+        : {};
+
+      this.transport = new WebTransport(url, options);
 
       await this.transport.ready;
       console.log("Connected to server");

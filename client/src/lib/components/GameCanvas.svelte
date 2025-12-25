@@ -24,6 +24,7 @@
     countdown?: number | null;
     playerSide?: "left" | "right" | null;
     scale?: number;
+    showTouchZones?: boolean;
   }
 
   let {
@@ -32,6 +33,7 @@
     countdown = null,
     playerSide = null,
     scale = 1,
+    showTouchZones = false,
   }: Props = $props();
 
   let canvas: HTMLCanvasElement;
@@ -122,13 +124,38 @@
   </div>
 
   <!-- Canvas wrapper with overlay -->
-  <div class="relative">
+  <div class="relative touch-none">
     <canvas
       bind:this={canvas}
       width={scaledWidth}
       height={scaledHeight}
       class="block rounded border-2 border-neutral-800 bg-[#0a0a0a]"
     ></canvas>
+
+    <!-- Touch zone indicators -->
+    {#if showTouchZones}
+      <div class="pointer-events-none absolute inset-0 flex">
+        {#if playerSide}
+          <!-- Online mode: single player, full area for touch -->
+          <div class="flex h-full w-full items-center justify-center">
+            <div class="flex flex-col items-center gap-1 text-cyan-400/30">
+              <span class="text-2xl">↕</span>
+              <span class="text-xs font-medium">Drag to move</span>
+            </div>
+          </div>
+        {:else}
+          <!-- Local mode: split screen for two players -->
+          <div
+            class="flex h-full w-1/2 items-center justify-center border-r border-cyan-400/20"
+          >
+            <span class="text-sm font-medium text-cyan-400/40">P1</span>
+          </div>
+          <div class="flex h-full w-1/2 items-center justify-center">
+            <span class="text-sm font-medium text-yellow-400/40">P2</span>
+          </div>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Countdown overlay -->
     {#if countdown !== null && countdown > 0}

@@ -23,6 +23,7 @@
   let countdown = $state<number | null>(null);
   let winner = $state<number | null>(null);
   let intentionalDisconnect = false;
+  let isTouchDevice = $state(false);
 
   let gameState = $state<GameState>({
     ballX: 395,
@@ -35,6 +36,15 @@
 
   const keys = { up: false, down: false };
   let inputInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Touch state - target Y position in game coordinates
+  let activeTouch = $state<number | null>(null);
+  let touchTargetY = $state<number | null>(null);
+  let canvasRect: DOMRect | null = null;
+
+  // Dead zone in game units - paddle won't move if finger is within this distance of paddle center
+  // Needs to be fairly large to account for touch sensor noise and prevent jitter
+  const TOUCH_DEAD_ZONE = 25;
 
   function handleKeyDown(e: KeyboardEvent) {
     if (mode !== "playing") return;
@@ -74,11 +84,70 @@
     }
   }
 
+  // Convert screen Y position to game Y coordinate
+  function screenToGameY(screenY: number, rect: DOMRect): number {
+    const relativeY = (screenY - rect.top) / rect.height;
+    return relativeY * FIELD_HEIGHT;
+  }
+
+  function getTouchInput(): number {
+    if (touchTargetY === null || side === null) return 0;
+
+    // Get the player's paddle Y based on which side they're on
+    const paddleY =
+      side === "left" ? gameState.leftPaddleY : gameState.rightPaddleY;
+    const paddleCenterY = paddleY + PADDLE_HEIGHT / 2;
+    const diff = touchTargetY - paddleCenterY;
+
+    // Dead zone to prevent jitter
+    if (Math.abs(diff) < TOUCH_DEAD_ZONE) return 0;
+
+    // Return -1 to move up, 1 to move down
+    return diff < 0 ? -1 : 1;
+  }
+
   function getInput(): number {
+    // Touch input takes priority when touch is active
+    if (activeTouch !== null) return getTouchInput();
+
     let input = 0;
     if (keys.up) input -= 1;
     if (keys.down) input += 1;
     return input;
+  }
+
+  // Touch handlers for iPad/mobile
+  function handleTouchStart(e: TouchEvent) {
+    if (mode !== "playing" || status !== "playing") return;
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    activeTouch = touch.identifier;
+    touchTargetY = screenToGameY(touch.clientY, canvasRect);
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (activeTouch === null || !canvasRect) return;
+    e.preventDefault();
+
+    for (const touch of Array.from(e.touches)) {
+      if (touch.identifier === activeTouch) {
+        touchTargetY = screenToGameY(touch.clientY, canvasRect);
+        break;
+      }
+    }
+  }
+
+  function handleTouchEnd(e: TouchEvent) {
+    for (const touch of Array.from(e.changedTouches)) {
+      if (touch.identifier === activeTouch) {
+        activeTouch = null;
+        touchTargetY = null;
+        break;
+      }
+    }
   }
 
   function startInputLoop() {
@@ -227,6 +296,7 @@
   }
 
   onMount(() => {
+    isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
   });
@@ -246,16 +316,20 @@
     if (mode !== "playing") return null;
     if (status === "connecting") return "Connecting...";
     if (status === "waiting") return "Waiting for opponent...";
+
+    const leaveHint = isTouchDevice
+      ? "Tap Leave to exit"
+      : "Press ESC to leave";
+
     if (status === "opponent_left")
-      return "Opponent disconnected\n\nPress ESC to leave";
-    if (status === "disconnected")
-      return "Connection lost\n\nPress ESC to leave";
+      return `Opponent disconnected\n\n${leaveHint}`;
+    if (status === "disconnected") return `Connection lost\n\n${leaveHint}`;
     if (status === "game_over" && winner !== null) {
       const isWinner =
         (winner === 0 && side === "left") || (winner === 1 && side === "right");
       return isWinner
-        ? "You Win!\n\nPress ESC to leave"
-        : "You Lose!\n\nPress ESC to leave";
+        ? `You Win!\n\n${leaveHint}`
+        : `You Lose!\n\n${leaveHint}`;
     }
     return null;
   });
@@ -288,23 +362,34 @@
       {/if}
     </header>
 
-    <main class="flex flex-1 items-center justify-center">
+    <main
+      class="flex flex-1 items-center justify-center"
+      ontouchstart={handleTouchStart}
+      ontouchmove={handleTouchMove}
+      ontouchend={handleTouchEnd}
+      ontouchcancel={handleTouchEnd}
+    >
       <GameCanvas
         state={gameState}
         {overlay}
         countdown={displayCountdown}
         playerSide={side}
+        showTouchZones={isTouchDevice && status === "playing"}
       />
     </main>
 
     <footer
       class="flex items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
     >
-      {#if side === "left"}
-        <div class="flex flex-col items-center gap-2">
-          <span class="text-xs tracking-widest text-neutral-500 uppercase"
-            >Your controls</span
+      <div class="flex flex-col items-center gap-2">
+        <span class="text-xs tracking-widest text-neutral-500 uppercase"
+          >Your controls</span
+        >
+        {#if isTouchDevice}
+          <span class="text-sm text-cyan-400"
+            >Touch where you want the paddle</span
           >
+        {:else if side === "left"}
           <div class="flex gap-2">
             <kbd
               class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
@@ -315,12 +400,7 @@
               >S</kbd
             >
           </div>
-        </div>
-      {:else if side === "right"}
-        <div class="flex flex-col items-center gap-2">
-          <span class="text-xs tracking-widest text-neutral-500 uppercase"
-            >Your controls</span
-          >
+        {:else if side === "right"}
           <div class="flex gap-2">
             <kbd
               class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
@@ -331,8 +411,8 @@
               >↓</kbd
             >
           </div>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </footer>
   </div>
 {:else}

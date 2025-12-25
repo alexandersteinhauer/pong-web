@@ -11,11 +11,13 @@
     getRightInput,
   } from "$lib/game/local";
   import type { Game } from "$lib/game/wasm";
+  import { FIELD_HEIGHT, PADDLE_HEIGHT } from "$lib/game/wasm";
 
   let game = $state<Game | null>(null);
   let running = $state(false);
   let winner = $state<number>(-1);
   let loading = $state(true);
+  let isTouchDevice = $state(false);
 
   let gameState = $state({
     ballX: 395,
@@ -30,6 +32,17 @@
   let animationFrame: number | null = null;
   let lastTime: number | null = null;
 
+  // Touch state - track by touch identifier and target Y position
+  let leftTouchId = $state<number | null>(null);
+  let rightTouchId = $state<number | null>(null);
+  let leftTouchTargetY = $state<number | null>(null); // Target Y in game coordinates
+  let rightTouchTargetY = $state<number | null>(null);
+  let canvasRect = $state<DOMRect | null>(null);
+
+  // Dead zone in game units - paddle won't move if finger is within this distance of paddle center
+  // Needs to be fairly large to account for touch sensor noise and prevent jitter
+  const TOUCH_DEAD_ZONE = 25;
+
   function updateGameState() {
     if (!game) return;
 
@@ -43,6 +56,19 @@
     };
   }
 
+  function getTouchInput(targetY: number | null, paddleY: number): number {
+    if (targetY === null) return 0;
+
+    const paddleCenterY = paddleY + PADDLE_HEIGHT / 2;
+    const diff = targetY - paddleCenterY;
+
+    // Dead zone to prevent jitter
+    if (Math.abs(diff) < TOUCH_DEAD_ZONE) return 0;
+
+    // Return -1 to move up, 1 to move down
+    return diff < 0 ? -1 : 1;
+  }
+
   function gameLoop(timestamp: number) {
     if (!game || !running) return;
 
@@ -53,9 +79,20 @@
     const dt = (timestamp - lastTime) / 1000;
     lastTime = timestamp;
 
-    // Update inputs
-    game.left_paddle_input = getLeftInput(keys);
-    game.right_paddle_input = getRightInput(keys);
+    // Update inputs - combine keyboard and touch
+    const leftKeyInput = getLeftInput(keys);
+    const rightKeyInput = getRightInput(keys);
+    const leftTouchInput = getTouchInput(leftTouchTargetY, game.left_paddle_y);
+    const rightTouchInput = getTouchInput(
+      rightTouchTargetY,
+      game.right_paddle_y,
+    );
+
+    // Touch takes priority, otherwise use keyboard
+    game.left_paddle_input =
+      leftTouchId !== null ? leftTouchInput : leftKeyInput;
+    game.right_paddle_input =
+      rightTouchId !== null ? rightTouchInput : rightKeyInput;
 
     // Update game
     game.update(dt);
@@ -104,7 +141,79 @@
     handleKeyUp(keys, e);
   }
 
+  // Convert screen Y position to game Y coordinate
+  function screenToGameY(screenY: number, rect: DOMRect): number {
+    const relativeY = (screenY - rect.top) / rect.height;
+    return relativeY * FIELD_HEIGHT;
+  }
+
+  // Touch handlers for iPad/mobile
+  function handleTouchStart(e: TouchEvent) {
+    if (!game || !running) {
+      // Start game on tap if not running
+      if (!running && winner === -1 && game) {
+        startGame();
+      } else if (winner !== -1) {
+        startGame();
+      }
+      return;
+    }
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    canvasRect = rect;
+
+    for (const touch of Array.from(e.changedTouches)) {
+      const x = touch.clientX - rect.left;
+      const relativeX = x / rect.width;
+      const gameY = screenToGameY(touch.clientY, rect);
+
+      // Left half controls left paddle, right half controls right paddle
+      if (relativeX < 0.5 && leftTouchId === null) {
+        leftTouchId = touch.identifier;
+        leftTouchTargetY = gameY;
+      } else if (relativeX >= 0.5 && rightTouchId === null) {
+        rightTouchId = touch.identifier;
+        rightTouchTargetY = gameY;
+      }
+    }
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (!game || !running) return;
+    e.preventDefault();
+
+    const rect =
+      canvasRect || (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+    for (const touch of Array.from(e.changedTouches)) {
+      const gameY = screenToGameY(touch.clientY, rect);
+
+      if (leftTouchId !== null && touch.identifier === leftTouchId) {
+        leftTouchTargetY = gameY;
+      }
+
+      if (rightTouchId !== null && touch.identifier === rightTouchId) {
+        rightTouchTargetY = gameY;
+      }
+    }
+  }
+
+  function handleTouchEnd(e: TouchEvent) {
+    for (const touch of Array.from(e.changedTouches)) {
+      if (leftTouchId !== null && touch.identifier === leftTouchId) {
+        leftTouchId = null;
+        leftTouchTargetY = null;
+      }
+      if (rightTouchId !== null && touch.identifier === rightTouchId) {
+        rightTouchId = null;
+        rightTouchTargetY = null;
+      }
+    }
+  }
+
   onMount(async () => {
+    // Detect touch device
+    isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
     try {
       game = await initLocalGame();
       updateGameState();
@@ -129,9 +238,12 @@
     if (loading) return "Loading...";
     if (winner !== -1) {
       const winnerName = winner === 0 ? "Player 1" : "Player 2";
-      return `${winnerName} Wins!\n\nPress SPACE to rematch`;
+      return isTouchDevice
+        ? `${winnerName} Wins!\n\nTap to rematch`
+        : `${winnerName} Wins!\n\nPress SPACE to rematch`;
     }
-    if (!running) return "Press SPACE to start";
+    if (!running)
+      return isTouchDevice ? "Tap to start" : "Press SPACE to start";
     return null;
   });
 </script>
@@ -147,43 +259,69 @@
     <h1 class="text-xl font-bold text-neutral-500">Local Multiplayer</h1>
   </header>
 
-  <main class="flex flex-1 items-center justify-center">
-    <GameCanvas state={gameState} {overlay} />
+  <main
+    class="flex flex-1 items-center justify-center"
+    ontouchstart={handleTouchStart}
+    ontouchmove={handleTouchMove}
+    ontouchend={handleTouchEnd}
+    ontouchcancel={handleTouchEnd}
+  >
+    <GameCanvas
+      state={gameState}
+      {overlay}
+      showTouchZones={isTouchDevice && running}
+    />
   </main>
 
   <footer
     class="flex items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
   >
-    <div class="flex flex-col items-center gap-2">
-      <span class="text-xs tracking-widest text-neutral-500 uppercase"
-        >Player 1</span
-      >
-      <div class="flex gap-2">
-        <kbd
-          class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-          >W</kbd
+    {#if isTouchDevice}
+      <div class="flex flex-col items-center gap-2">
+        <span class="text-xs tracking-widest text-neutral-500 uppercase"
+          >Player 1</span
         >
-        <kbd
-          class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-          >S</kbd
-        >
+        <span class="text-sm text-cyan-400">Touch left side</span>
       </div>
-    </div>
-    <div class="h-12 w-px bg-neutral-800"></div>
-    <div class="flex flex-col items-center gap-2">
-      <span class="text-xs tracking-widest text-neutral-500 uppercase"
-        >Player 2</span
-      >
-      <div class="flex gap-2">
-        <kbd
-          class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-          >↑</kbd
+      <div class="h-12 w-px bg-neutral-800"></div>
+      <div class="flex flex-col items-center gap-2">
+        <span class="text-xs tracking-widest text-neutral-500 uppercase"
+          >Player 2</span
         >
-        <kbd
-          class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-          >↓</kbd
-        >
+        <span class="text-sm text-cyan-400">Touch right side</span>
       </div>
-    </div>
+    {:else}
+      <div class="flex flex-col items-center gap-2">
+        <span class="text-xs tracking-widest text-neutral-500 uppercase"
+          >Player 1</span
+        >
+        <div class="flex gap-2">
+          <kbd
+            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+            >W</kbd
+          >
+          <kbd
+            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+            >S</kbd
+          >
+        </div>
+      </div>
+      <div class="h-12 w-px bg-neutral-800"></div>
+      <div class="flex flex-col items-center gap-2">
+        <span class="text-xs tracking-widest text-neutral-500 uppercase"
+          >Player 2</span
+        >
+        <div class="flex gap-2">
+          <kbd
+            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+            >↑</kbd
+          >
+          <kbd
+            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+            >↓</kbd
+          >
+        </div>
+      </div>
+    {/if}
   </footer>
 </div>

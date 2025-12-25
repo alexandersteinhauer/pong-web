@@ -2,6 +2,7 @@ use anyhow::Result;
 use pong::Game;
 use rand::Rng;
 use std::collections::HashMap;
+use std::env;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
@@ -47,7 +48,9 @@ fn generate_room_code() -> String {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let identity = Identity::load_pemfiles("../cert/cert.pem", "../cert/key.pem").await?;
+    let cert_path = env::var("TLS_CERT").unwrap_or_else(|_| "../cert/cert.pem".to_string());
+    let key_path = env::var("TLS_KEY").unwrap_or_else(|_| "../cert/key.pem".to_string());
+    let identity = Identity::load_pemfiles(&cert_path, &key_path).await?;
 
     let config = ServerConfig::builder()
         .with_bind_default(4433)
