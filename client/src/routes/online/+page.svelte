@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
-	import { PongTransport, type ConnectionStatus, type GameState } from '$lib/game/transport';
+	import { PongTransport, type ConnectionStatus } from '$lib/game/transport';
 
 	let mode: 'select' | 'creating' | 'joining' = $state('select');
 	let roomCode = $state('');
@@ -26,7 +26,6 @@
 				roomCode = code;
 			},
 			onSideAssigned: (side) => {
-				// Game is starting, navigate to game room
 				goto(`/online/${roomCode}?side=${side}&host=true`);
 			},
 			onCountdown: () => {},
@@ -64,7 +63,6 @@
 			},
 			onRoomCode: () => {},
 			onSideAssigned: (side) => {
-				// Game is starting, navigate to game room
 				goto(`/online/${code}?side=${side}&host=false`);
 			},
 			onCountdown: () => {},
@@ -96,334 +94,97 @@
 	});
 </script>
 
-<div class="container">
-	<header class="header">
-		<button class="back-btn" onclick={() => goto('/')}>← Back</button>
-		<h1 class="title">Online Multiplayer</h1>
+<div class="flex min-h-screen flex-col items-center gap-8 p-6">
+	<header class="flex w-full max-w-[500px] items-center gap-6">
+		<button
+			class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
+			onclick={() => goto('/')}
+		>
+			← Back
+		</button>
+		<h1 class="text-xl font-bold text-neutral-500">Online Multiplayer</h1>
 	</header>
 
-	<main class="content">
+	<main class="flex flex-1 w-full max-w-[500px] items-center justify-center">
 		{#if mode === 'select'}
-			<div class="options">
-				<button class="option-btn create" onclick={createRoom}>
-					<span class="btn-icon">✨</span>
-					<span class="btn-content">
-						<span class="btn-title">Create Room</span>
-						<span class="btn-desc">Get a code to share with a friend</span>
+			<div class="flex w-full flex-col gap-6">
+				<button
+					class="flex cursor-pointer items-center gap-5 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-6 text-left transition-all hover:-translate-y-0.5 hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(34,211,238,0.3)]"
+					onclick={createRoom}
+				>
+					<span class="text-3xl">✨</span>
+					<span class="flex flex-col gap-1">
+						<span class="text-lg font-bold text-white">Create Room</span>
+						<span class="text-xs text-neutral-500">Get a code to share with a friend</span>
 					</span>
 				</button>
 
-				<div class="divider">
+				<div class="flex items-center gap-4 text-sm text-neutral-500">
+					<div class="h-px flex-1 bg-neutral-800"></div>
 					<span>or</span>
+					<div class="h-px flex-1 bg-neutral-800"></div>
 				</div>
 
-				<div class="join-form">
-					<label class="join-label" for="join-code">Join with code</label>
-					<div class="join-input-group">
+				<div class="flex flex-col gap-3">
+					<label class="text-sm text-neutral-500" for="join-code">Join with code</label>
+					<div class="flex gap-3">
 						<input
 							id="join-code"
 							type="text"
-							class="join-input"
+							class="flex-1 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-5 py-4 text-center text-xl font-bold uppercase tracking-[0.2em] text-white placeholder:text-neutral-700 focus:border-cyan-400 focus:outline-none"
 							placeholder="ABCD12"
 							maxlength="6"
 							bind:value={joinCode}
 							onkeydown={(e) => e.key === 'Enter' && joinRoom()}
 						/>
-						<button class="join-btn" onclick={joinRoom}>Join</button>
+						<button
+							class="cursor-pointer rounded-lg bg-cyan-400 px-8 py-4 font-bold text-black transition-all hover:-translate-y-0.5 hover:opacity-90"
+							onclick={joinRoom}
+						>
+							Join
+						</button>
 					</div>
 				</div>
 
 				{#if error}
-					<div class="error">{error}</div>
+					<div class="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-center text-sm text-red-500">
+						{error}
+					</div>
 				{/if}
 			</div>
 		{:else if mode === 'creating'}
-			<div class="waiting-screen">
-				<div class="waiting-card">
-					{#if roomCode}
-						<div class="room-code-label">Your room code</div>
-						<div class="room-code">{roomCode}</div>
-						<div class="room-code-hint">Share this code with your friend</div>
-					{/if}
-					<div class="waiting-status">
-						<div class="spinner"></div>
-						<span>Waiting for opponent...</span>
+			<div class="flex flex-col items-center gap-6 rounded-xl border border-neutral-800 bg-[#0a0a0a] p-12 text-center">
+				{#if roomCode}
+					<div class="text-xs uppercase tracking-widest text-neutral-500">Your room code</div>
+					<div class="text-5xl font-bold tracking-[0.3em] text-cyan-400 drop-shadow-[0_0_30px_rgba(34,211,238,0.3)]">
+						{roomCode}
 					</div>
-					<button class="cancel-btn" onclick={cancel}>Cancel</button>
+					<div class="text-sm text-neutral-500">Share this code with your friend</div>
+				{/if}
+				<div class="flex items-center gap-4 text-neutral-500">
+					<div class="h-5 w-5 animate-spin rounded-full border-2 border-neutral-800 border-t-cyan-400"></div>
+					<span>Waiting for opponent...</span>
 				</div>
+				<button
+					class="cursor-pointer rounded-md border border-neutral-800 px-6 py-3 text-sm text-neutral-500 transition-all hover:border-red-500 hover:text-red-500"
+					onclick={cancel}
+				>
+					Cancel
+				</button>
 			</div>
 		{:else if mode === 'joining'}
-			<div class="waiting-screen">
-				<div class="waiting-card">
-					<div class="waiting-status">
-						<div class="spinner"></div>
-						<span>Joining room...</span>
-					</div>
-					<button class="cancel-btn" onclick={cancel}>Cancel</button>
+			<div class="flex flex-col items-center gap-6 rounded-xl border border-neutral-800 bg-[#0a0a0a] p-12 text-center">
+				<div class="flex items-center gap-4 text-neutral-500">
+					<div class="h-5 w-5 animate-spin rounded-full border-2 border-neutral-800 border-t-cyan-400"></div>
+					<span>Joining room...</span>
 				</div>
+				<button
+					class="cursor-pointer rounded-md border border-neutral-800 px-6 py-3 text-sm text-neutral-500 transition-all hover:border-red-500 hover:text-red-500"
+					onclick={cancel}
+				>
+					Cancel
+				</button>
 			</div>
 		{/if}
 	</main>
 </div>
-
-<style>
-	.container {
-		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 1.5rem;
-		gap: 2rem;
-	}
-
-	.header {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		width: 100%;
-		max-width: 500px;
-	}
-
-	.back-btn {
-		padding: 0.5rem 1rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 6px;
-		color: var(--color-text);
-		font-family: inherit;
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.back-btn:hover {
-		border-color: var(--color-accent);
-	}
-
-	.title {
-		font-size: 1.25rem;
-		font-weight: 700;
-		margin: 0;
-		color: var(--color-text-muted);
-	}
-
-	.content {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-		max-width: 500px;
-	}
-
-	.options {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-		width: 100%;
-	}
-
-	.option-btn {
-		display: flex;
-		align-items: center;
-		gap: 1.25rem;
-		padding: 1.5rem 2rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		text-align: left;
-	}
-
-	.option-btn:hover {
-		border-color: var(--color-accent);
-		box-shadow: 0 0 30px var(--color-accent-glow);
-		transform: translateY(-2px);
-	}
-
-	.btn-icon {
-		font-size: 2rem;
-	}
-
-	.btn-content {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	.btn-title {
-		font-size: 1.125rem;
-		font-weight: 700;
-		color: var(--color-text);
-	}
-
-	.btn-desc {
-		font-size: 0.75rem;
-		color: var(--color-text-muted);
-	}
-
-	.divider {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		color: var(--color-text-muted);
-		font-size: 0.875rem;
-	}
-
-	.divider::before,
-	.divider::after {
-		content: '';
-		flex: 1;
-		height: 1px;
-		background: var(--color-border);
-	}
-
-	.join-form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.join-label {
-		font-size: 0.875rem;
-		color: var(--color-text-muted);
-	}
-
-	.join-input-group {
-		display: flex;
-		gap: 0.75rem;
-	}
-
-	.join-input {
-		flex: 1;
-		padding: 1rem 1.25rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
-		color: var(--color-text);
-		font-family: inherit;
-		font-size: 1.25rem;
-		font-weight: 700;
-		letter-spacing: 0.2em;
-		text-transform: uppercase;
-		text-align: center;
-	}
-
-	.join-input::placeholder {
-		color: var(--color-text-muted);
-		opacity: 0.5;
-	}
-
-	.join-input:focus {
-		outline: none;
-		border-color: var(--color-accent);
-	}
-
-	.join-btn {
-		padding: 1rem 2rem;
-		background: var(--color-accent);
-		border: none;
-		border-radius: 8px;
-		color: #000;
-		font-family: inherit;
-		font-size: 1rem;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.join-btn:hover {
-		opacity: 0.9;
-		transform: translateY(-1px);
-	}
-
-	.error {
-		padding: 1rem;
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.3);
-		border-radius: 8px;
-		color: #ef4444;
-		font-size: 0.875rem;
-		text-align: center;
-	}
-
-	.waiting-screen {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-	}
-
-	.waiting-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 1.5rem;
-		padding: 3rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 12px;
-		text-align: center;
-	}
-
-	.room-code-label {
-		font-size: 0.75rem;
-		color: var(--color-text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-	}
-
-	.room-code {
-		font-size: 3rem;
-		font-weight: 700;
-		letter-spacing: 0.3em;
-		color: var(--color-accent);
-		text-shadow: 0 0 30px var(--color-accent-glow);
-	}
-
-	.room-code-hint {
-		font-size: 0.875rem;
-		color: var(--color-text-muted);
-	}
-
-	.waiting-status {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		color: var(--color-text-muted);
-	}
-
-	.spinner {
-		width: 20px;
-		height: 20px;
-		border: 2px solid var(--color-border);
-		border-top-color: var(--color-accent);
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.cancel-btn {
-		padding: 0.75rem 1.5rem;
-		background: transparent;
-		border: 1px solid var(--color-border);
-		border-radius: 6px;
-		color: var(--color-text-muted);
-		font-family: inherit;
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.cancel-btn:hover {
-		border-color: #ef4444;
-		color: #ef4444;
-	}
-</style>
-

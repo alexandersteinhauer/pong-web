@@ -135,14 +135,9 @@
 	});
 </script>
 
-<canvas bind:this={canvas} width={scaledWidth} height={scaledHeight} class="game-canvas"></canvas>
-
-<style>
-	.game-canvas {
-		display: block;
-		border: 2px solid #333;
-		border-radius: 4px;
-		background: #0a0a0a;
-	}
-</style>
-
+<canvas
+	bind:this={canvas}
+	width={scaledWidth}
+	height={scaledHeight}
+	class="block rounded border-2 border-neutral-800 bg-[#0a0a0a]"
+></canvas>

@@ -25,7 +25,6 @@
 		rightScore: 0
 	});
 
-	// Key state for input
 	const keys = { up: false, down: false };
 
 	function handleKeyDown(e: KeyboardEvent) {
@@ -49,7 +48,6 @@
 			}
 		}
 
-		// Back to menu on Escape
 		if (e.key === 'Escape') {
 			goto('/online');
 		}
@@ -80,7 +78,7 @@
 			if (transport && status === 'playing') {
 				transport.sendInput(getInput());
 			}
-		}, 1000 / 60); // 60 Hz
+		}, 1000 / 60);
 	}
 
 	function stopInputLoop() {
@@ -115,7 +113,6 @@
 			}
 		});
 
-		// If we already have side info from URL, use it
 		if (initialSide) {
 			side = initialSide;
 		}
@@ -135,7 +132,6 @@
 
 	onMount(() => {
 		connect();
-
 		window.addEventListener('keydown', handleKeyDown);
 		window.addEventListener('keyup', handleKeyUp);
 	});
@@ -164,155 +160,59 @@
 	let displayCountdown = $derived(status === 'countdown' ? countdown : null);
 </script>
 
-<div class="container">
-	<header class="header">
-		<button class="back-btn" onclick={() => goto('/online')}>← Leave</button>
-		<h1 class="title">Room: {code}</h1>
+<div class="flex min-h-screen flex-col items-center gap-6 p-6">
+	<header class="flex w-full max-w-[800px] items-center gap-6">
+		<button
+			class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-red-500 hover:text-red-500"
+			onclick={() => goto('/online')}
+		>
+			← Leave
+		</button>
+		<h1 class="flex-1 text-xl font-bold text-neutral-500">Room: {code}</h1>
 		{#if side}
-			<span class="side-badge" class:left={side === 'left'} class:right={side === 'right'}>
+			<span
+				class="rounded px-3 py-1.5 text-xs font-bold uppercase tracking-wide {side === 'left'
+					? 'border border-cyan-400/30 bg-cyan-400/15 text-cyan-400'
+					: 'border border-yellow-400/30 bg-yellow-400/15 text-yellow-400'}"
+			>
 				You: {side === 'left' ? 'Left' : 'Right'}
 			</span>
 		{/if}
 	</header>
 
-	<main class="game-area">
+	<main class="flex flex-1 items-center justify-center">
 		<GameCanvas state={gameState} {overlay} countdown={displayCountdown} playerSide={side} />
 	</main>
 
-	<footer class="controls">
+	<footer class="flex items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4">
 		{#if side === 'left'}
-			<div class="control-hint">
-				<span class="hint-label">Your controls</span>
-				<div class="keys">
-					<kbd>W</kbd>
-					<kbd>S</kbd>
+			<div class="flex flex-col items-center gap-2">
+				<span class="text-xs uppercase tracking-widest text-neutral-500">Your controls</span>
+				<div class="flex gap-2">
+					<kbd
+						class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+						>W</kbd
+					>
+					<kbd
+						class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+						>S</kbd
+					>
 				</div>
 			</div>
 		{:else if side === 'right'}
-			<div class="control-hint">
-				<span class="hint-label">Your controls</span>
-				<div class="keys">
-					<kbd>↑</kbd>
-					<kbd>↓</kbd>
+			<div class="flex flex-col items-center gap-2">
+				<span class="text-xs uppercase tracking-widest text-neutral-500">Your controls</span>
+				<div class="flex gap-2">
+					<kbd
+						class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+						>↑</kbd
+					>
+					<kbd
+						class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+						>↓</kbd
+					>
 				</div>
 			</div>
 		{/if}
 	</footer>
 </div>
-
-<style>
-	.container {
-		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 1.5rem;
-		gap: 1.5rem;
-	}
-
-	.header {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		width: 100%;
-		max-width: 800px;
-	}
-
-	.back-btn {
-		padding: 0.5rem 1rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 6px;
-		color: var(--color-text);
-		font-family: inherit;
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.back-btn:hover {
-		border-color: #ef4444;
-		color: #ef4444;
-	}
-
-	.title {
-		font-size: 1.25rem;
-		font-weight: 700;
-		margin: 0;
-		color: var(--color-text-muted);
-		flex: 1;
-	}
-
-	.side-badge {
-		padding: 0.375rem 0.75rem;
-		border-radius: 4px;
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.side-badge.left {
-		background: rgba(34, 211, 238, 0.15);
-		color: var(--color-accent);
-		border: 1px solid rgba(34, 211, 238, 0.3);
-	}
-
-	.side-badge.right {
-		background: rgba(250, 204, 21, 0.15);
-		color: var(--color-ball);
-		border: 1px solid rgba(250, 204, 21, 0.3);
-	}
-
-	.game-area {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.controls {
-		display: flex;
-		align-items: center;
-		gap: 2rem;
-		padding: 1rem 2rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
-	}
-
-	.control-hint {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.hint-label {
-		font-size: 0.75rem;
-		color: var(--color-text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-	}
-
-	.keys {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	kbd {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 2rem;
-		padding: 0.375rem 0.625rem;
-		background: #1a1a1a;
-		border: 1px solid #333;
-		border-radius: 4px;
-		font-family: inherit;
-		font-size: 0.875rem;
-		font-weight: 700;
-		color: var(--color-accent);
-	}
-</style>
-

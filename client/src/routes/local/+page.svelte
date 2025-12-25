@@ -136,131 +136,48 @@
 	});
 </script>
 
-<div class="container">
-	<header class="header">
-		<button class="back-btn" onclick={() => goto('/')}>← Back</button>
-		<h1 class="title">Local Multiplayer</h1>
+<div class="flex min-h-screen flex-col items-center gap-6 p-6">
+	<header class="flex w-full max-w-[800px] items-center gap-6">
+		<button
+			class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
+			onclick={() => goto('/')}
+		>
+			← Back
+		</button>
+		<h1 class="text-xl font-bold text-neutral-500">Local Multiplayer</h1>
 	</header>
 
-	<main class="game-area">
+	<main class="flex flex-1 items-center justify-center">
 		<GameCanvas state={gameState} {overlay} />
 	</main>
 
-	<footer class="controls">
-		<div class="player-controls">
-			<span class="player-label">Player 1</span>
-			<div class="keys">
-				<kbd>W</kbd>
-				<kbd>S</kbd>
+	<footer class="flex items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4">
+		<div class="flex flex-col items-center gap-2">
+			<span class="text-xs uppercase tracking-widest text-neutral-500">Player 1</span>
+			<div class="flex gap-2">
+				<kbd
+					class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+					>W</kbd
+				>
+				<kbd
+					class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+					>S</kbd
+				>
 			</div>
 		</div>
-		<div class="divider"></div>
-		<div class="player-controls">
-			<span class="player-label">Player 2</span>
-			<div class="keys">
-				<kbd>↑</kbd>
-				<kbd>↓</kbd>
+		<div class="h-12 w-px bg-neutral-800"></div>
+		<div class="flex flex-col items-center gap-2">
+			<span class="text-xs uppercase tracking-widest text-neutral-500">Player 2</span>
+			<div class="flex gap-2">
+				<kbd
+					class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+					>↑</kbd
+				>
+				<kbd
+					class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+					>↓</kbd
+				>
 			</div>
 		</div>
 	</footer>
 </div>
-
-<style>
-	.container {
-		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 1.5rem;
-		gap: 1.5rem;
-	}
-
-	.header {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		width: 100%;
-		max-width: 800px;
-	}
-
-	.back-btn {
-		padding: 0.5rem 1rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 6px;
-		color: var(--color-text);
-		font-family: inherit;
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.back-btn:hover {
-		border-color: var(--color-accent);
-	}
-
-	.title {
-		font-size: 1.25rem;
-		font-weight: 700;
-		margin: 0;
-		color: var(--color-text-muted);
-	}
-
-	.game-area {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.controls {
-		display: flex;
-		align-items: center;
-		gap: 2rem;
-		padding: 1rem 2rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
-	}
-
-	.player-controls {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.player-label {
-		font-size: 0.75rem;
-		color: var(--color-text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-	}
-
-	.keys {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	kbd {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 2rem;
-		padding: 0.375rem 0.625rem;
-		background: #1a1a1a;
-		border: 1px solid #333;
-		border-radius: 4px;
-		font-family: inherit;
-		font-size: 0.875rem;
-		font-weight: 700;
-		color: var(--color-accent);
-	}
-
-	.divider {
-		width: 1px;
-		height: 3rem;
-		background: var(--color-border);
-	}
-</style>
-
