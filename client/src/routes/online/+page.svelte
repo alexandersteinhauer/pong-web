@@ -18,6 +18,7 @@
 	let side: 'left' | 'right' | null = $state(null);
 	let countdown: number | null = $state(null);
 	let winner: number | null = $state(null);
+	let intentionalDisconnect = false;
 
 	let gameState = $state<GameState>({
 		ballX: 395,
@@ -96,6 +97,7 @@
 		mode = 'creating';
 		error = null;
 
+		intentionalDisconnect = false;
 		transport = new PongTransport({
 			onStatusChange: (s) => {
 				status = s;
@@ -104,7 +106,7 @@
 				} else if (s === 'game_over' || s === 'opponent_left' || s === 'disconnected') {
 					stopInputLoop();
 				}
-				if (s === 'disconnected' && mode !== 'playing') {
+				if (s === 'disconnected' && mode !== 'playing' && !intentionalDisconnect) {
 					error = 'Connection lost. Please try again.';
 					mode = 'select';
 				}
@@ -145,6 +147,7 @@
 		const code = joinCode.trim().toUpperCase();
 		roomCode = code;
 
+		intentionalDisconnect = false;
 		transport = new PongTransport({
 			onStatusChange: (s) => {
 				status = s;
@@ -156,7 +159,7 @@
 				if (s === 'join_failed') {
 					error = 'Room not found. Check the code and try again.';
 					mode = 'select';
-				} else if (s === 'disconnected' && mode !== 'playing') {
+				} else if (s === 'disconnected' && mode !== 'playing' && !intentionalDisconnect) {
 					error = 'Connection lost. Please try again.';
 					mode = 'select';
 				}
@@ -185,6 +188,7 @@
 	}
 
 	function cancel() {
+		intentionalDisconnect = true;
 		if (transport) {
 			transport.close();
 			transport = null;
@@ -331,7 +335,7 @@
 							<input
 								id="join-code"
 								type="text"
-								class="flex-1 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-5 py-4 text-center text-xl font-bold uppercase tracking-[0.2em] text-white placeholder:text-neutral-700 focus:border-cyan-400 focus:outline-none"
+								class="flex-1 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-5 py-4 text-xl font-bold uppercase tracking-[0.2em] text-white placeholder:text-neutral-700 focus:border-cyan-400 focus:outline-none"
 								placeholder="ABCD12"
 								maxlength="6"
 								bind:value={joinCode}
