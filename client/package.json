@@ -12,7 +12,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
     "lint": "prettier --check .",
-    "proto": "pbjs -t static-module -w es6 -o src/lib/proto/pong.js ../proto/pong.proto && pbts -o src/lib/proto/pong.d.ts src/lib/proto/pong.js"
+    "proto": "pbjs -t static-module -w es6 -o src/lib/proto/pong.js ../proto/pong.proto && pbts -o src/lib/proto/pong.d.ts src/lib/proto/pong.js && prettier --write ."
   },
   "dependencies": {
     "protobufjs": "^7.5.4"
