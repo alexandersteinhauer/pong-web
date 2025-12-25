@@ -8,6 +8,7 @@ const PADDLE_OFFSET: f64 = 20.0;
 const PADDLE_SPEED: f64 = 400.0;
 const BALL_SIZE: f64 = 10.0;
 const BALL_SPEED: f64 = 500.0;
+const WINNING_SCORE: u32 = 7;
 
 #[derive(Clone, Copy)]
 struct AABB {
@@ -262,6 +263,25 @@ impl Game {
     }
     pub fn ball_size(&self) -> f64 {
         BALL_SIZE
+    }
+
+    pub fn is_game_over(&self) -> bool {
+        self.left_score >= WINNING_SCORE || self.right_score >= WINNING_SCORE
+    }
+
+    /// Returns the winner: 0 = left, 1 = right, -1 = no winner yet
+    pub fn winner(&self) -> i32 {
+        if self.left_score >= WINNING_SCORE {
+            0
+        } else if self.right_score >= WINNING_SCORE {
+            1
+        } else {
+            -1
+        }
+    }
+
+    pub fn reset(&mut self) {
+        *self = Game::new();
     }
 }
 

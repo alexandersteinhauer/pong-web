@@ -1,0 +1,37 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_game_free: (a: number, b: number) => void;
+export const __wbg_get_game_ball_vx: (a: number) => number;
+export const __wbg_get_game_ball_vy: (a: number) => number;
+export const __wbg_get_game_ball_x: (a: number) => number;
+export const __wbg_get_game_ball_y: (a: number) => number;
+export const __wbg_get_game_left_paddle_input: (a: number) => number;
+export const __wbg_get_game_left_paddle_y: (a: number) => number;
+export const __wbg_get_game_left_score: (a: number) => number;
+export const __wbg_get_game_right_paddle_input: (a: number) => number;
+export const __wbg_get_game_right_paddle_y: (a: number) => number;
+export const __wbg_get_game_right_score: (a: number) => number;
+export const __wbg_set_game_ball_vx: (a: number, b: number) => void;
+export const __wbg_set_game_ball_vy: (a: number, b: number) => void;
+export const __wbg_set_game_ball_x: (a: number, b: number) => void;
+export const __wbg_set_game_ball_y: (a: number, b: number) => void;
+export const __wbg_set_game_left_paddle_input: (a: number, b: number) => void;
+export const __wbg_set_game_left_paddle_y: (a: number, b: number) => void;
+export const __wbg_set_game_left_score: (a: number, b: number) => void;
+export const __wbg_set_game_right_paddle_input: (a: number, b: number) => void;
+export const __wbg_set_game_right_paddle_y: (a: number, b: number) => void;
+export const __wbg_set_game_right_score: (a: number, b: number) => void;
+export const game_ball_size: (a: number) => number;
+export const game_field_height: (a: number) => number;
+export const game_field_width: (a: number) => number;
+export const game_is_game_over: (a: number) => number;
+export const game_new: () => number;
+export const game_paddle_height: (a: number) => number;
+export const game_paddle_offset: (a: number) => number;
+export const game_reset: (a: number) => void;
+export const game_update: (a: number, b: number) => void;
+export const game_winner: (a: number) => number;
+export const game_paddle_width: (a: number) => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_start: () => void;
