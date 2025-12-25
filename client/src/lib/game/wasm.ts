@@ -1,22 +1,22 @@
-import init, { Game as WasmGame } from '$lib/wasm/pong';
-import wasmUrl from '$lib/wasm/pong_bg.wasm?url';
+import init, { Game as WasmGame } from "$lib/wasm/pong";
+import wasmUrl from "$lib/wasm/pong_bg.wasm?url";
 
 let initialized = false;
 
 export type { WasmGame as Game };
 
 export async function initWasm(): Promise<void> {
-	if (initialized) {
-		return;
-	}
+  if (initialized) {
+    return;
+  }
 
-	await init(wasmUrl);
-	initialized = true;
+  await init(wasmUrl);
+  initialized = true;
 }
 
 export async function createGame(): Promise<WasmGame> {
-	await initWasm();
-	return new WasmGame();
+  await initWasm();
+  return new WasmGame();
 }
 
 // Game constants (mirrored from Rust)
