@@ -374,8 +374,8 @@
 
 {#if mode === "playing"}
   <!-- Game View -->
-  <div class="flex min-h-screen flex-col items-center gap-6 p-6">
-    <header class="flex w-full max-w-[800px] items-center gap-6">
+  <div class="flex h-screen flex-col items-center gap-6 p-6 overflow-hidden bg-black text-white">
+    <header class="flex w-full max-w-[800px] shrink-0 items-center gap-6">
       <button
         class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-red-500 hover:text-red-500"
         onclick={leaveGame}
@@ -398,14 +398,14 @@
     </header>
 
     <main
-      class="flex flex-1 items-center justify-center"
+      class="flex w-full flex-1 items-center justify-center min-h-0"
       ontouchstart={handleTouchStart}
       ontouchmove={handleTouchMove}
       ontouchend={handleTouchEnd}
       ontouchcancel={handleTouchEnd}
     >
       <GameCanvas
-        state={gameState}
+        gameState={gameState}
         {overlay}
         countdown={displayCountdown}
         playerSide={side}
@@ -414,7 +414,7 @@
     </main>
 
     <footer
-      class="flex items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
+      class="flex shrink-0 items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
     >
       <div class="flex flex-col items-center gap-2">
         <span class="text-xs tracking-widest text-neutral-500 uppercase"
@@ -452,8 +452,8 @@
   </div>
 {:else}
   <!-- Lobby View -->
-  <div class="flex min-h-screen flex-col items-center gap-8 p-6">
-    <header class="flex w-full max-w-[500px] items-center gap-6">
+  <div class="flex h-screen flex-col items-center gap-8 p-6 overflow-hidden bg-black text-white">
+    <header class="flex w-full max-w-[500px] shrink-0 items-center gap-6">
       <button
         class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
         onclick={() => goto("/")}
@@ -463,11 +463,11 @@
       <h1 class="text-xl font-bold text-neutral-500">Online Multiplayer</h1>
     </header>
 
-    <main class="flex w-full max-w-[500px] flex-1 items-center justify-center">
+    <main class="flex w-full max-w-[500px] flex-1 items-center justify-center min-h-0">
       {#if mode === "select"}
-        <div class="flex w-full flex-col gap-6">
+        <div class="flex w-full flex-col gap-6 overflow-y-auto max-h-full p-2">
           <button
-            class="flex cursor-pointer items-center gap-5 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-6 text-left transition-all hover:-translate-y-0.5 hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(34,211,238,0.3)]"
+            class="flex cursor-pointer items-center gap-5 shrink-0 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-6 text-left transition-all hover:-translate-y-0.5 hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(34,211,238,0.3)]"
             onclick={createRoom}
           >
             <span class="text-3xl">✨</span>
@@ -479,13 +479,13 @@
             </span>
           </button>
 
-          <div class="flex items-center gap-4 text-sm text-neutral-500">
+          <div class="flex items-center gap-4 text-sm text-neutral-500 shrink-0">
             <div class="h-px flex-1 bg-neutral-800"></div>
             <span>or</span>
             <div class="h-px flex-1 bg-neutral-800"></div>
           </div>
 
-          <div class="flex flex-col gap-3">
+          <div class="flex flex-col gap-3 shrink-0">
             <label class="text-sm text-neutral-500" for="join-code"
               >Join with code</label
             >
@@ -510,7 +510,7 @@
 
           {#if error}
             <div
-              class="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-center text-sm text-red-500"
+              class="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-center text-sm text-red-500 shrink-0"
             >
               {error}
             </div>
@@ -518,7 +518,7 @@
         </div>
       {:else if mode === "creating"}
         <div
-          class="flex flex-col items-center gap-6 rounded-xl border border-neutral-800 bg-[#0a0a0a] p-12 text-center"
+          class="flex flex-col items-center gap-6 rounded-xl border border-neutral-800 bg-[#0a0a0a] p-12 text-center overflow-y-auto max-h-full"
         >
           {#if roomCode}
             <div class="text-xs tracking-widest text-neutral-500 uppercase">
@@ -548,7 +548,7 @@
         </div>
       {:else if mode === "joining"}
         <div
-          class="flex flex-col items-center gap-6 rounded-xl border border-neutral-800 bg-[#0a0a0a] p-12 text-center"
+          class="flex flex-col items-center gap-6 rounded-xl border border-neutral-800 bg-[#0a0a0a] p-12 text-center overflow-y-auto max-h-full"
         >
           <div class="flex items-center gap-4 text-neutral-500">
             <div

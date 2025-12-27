@@ -278,8 +278,8 @@
   });
 </script>
 
-<div class="flex min-h-screen flex-col items-center gap-6 p-6">
-  <header class="flex w-full max-w-[800px] items-center gap-6">
+<div class="flex h-screen flex-col items-center gap-6 p-6 overflow-hidden bg-black text-white">
+  <header class="flex w-full max-w-[800px] shrink-0 items-center gap-6">
     <button
       class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
       onclick={() => goto("/")}
@@ -290,21 +290,21 @@
   </header>
 
   <main
-    class="flex flex-1 items-center justify-center"
+    class="flex w-full flex-1 items-center justify-center min-h-0"
     ontouchstart={handleTouchStart}
     ontouchmove={handleTouchMove}
     ontouchend={handleTouchEnd}
     ontouchcancel={handleTouchEnd}
   >
     <GameCanvas
-      state={gameState}
+      gameState={gameState}
       {overlay}
       showTouchZones={isTouchDevice && running}
     />
   </main>
 
   <footer
-    class="flex items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
+    class="flex shrink-0 items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
   >
     {#if isTouchDevice}
       <div class="flex flex-col items-center gap-2">

@@ -19,25 +19,25 @@
   }
 
   interface Props {
-    state: GameState;
+    gameState: GameState;
     overlay?: string | null;
     countdown?: number | null;
     playerSide?: "left" | "right" | null;
-    scale?: number;
     showTouchZones?: boolean;
   }
 
   let {
-    state,
+    gameState,
     overlay = null,
     countdown = null,
     playerSide = null,
-    scale = 1,
     showTouchZones = false,
   }: Props = $props();
 
   let canvas: HTMLCanvasElement;
+  let container: HTMLDivElement;
   let ctx: CanvasRenderingContext2D | null = null;
+  let scale = $state(1);
 
   const scaledWidth = $derived(FIELD_WIDTH * scale);
   const scaledHeight = $derived(FIELD_HEIGHT * scale);
@@ -46,13 +46,26 @@
 
   onMount(() => {
     ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.scale(scale, scale);
-    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        const { width, height } = entry.contentRect;
+        // Calculate scale to fit FIELD_WIDTH x FIELD_HEIGHT into width x height
+        const scaleX = width / FIELD_WIDTH;
+        const scaleY = height / FIELD_HEIGHT;
+        scale = Math.min(scaleX, scaleY, 1); // Max scale of 1 to keep it crisp
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
   });
 
   $effect(() => {
     if (!ctx) return;
+    ctx.resetTransform();
+    ctx.scale(scale, scale);
 
     // Clear
     ctx.fillStyle = "#0a0a0a";
@@ -72,7 +85,7 @@
     ctx.fillStyle = playerSide === "left" ? "#22d3ee" : "#fff";
     ctx.shadowColor = playerSide === "left" ? "#22d3ee" : "transparent";
     ctx.shadowBlur = playerSide === "left" ? 15 : 0;
-    ctx.fillRect(PADDLE_OFFSET, state.leftPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    ctx.fillRect(PADDLE_OFFSET, gameState.leftPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
 
     // Right paddle
     ctx.fillStyle = playerSide === "right" ? "#22d3ee" : "#fff";
@@ -80,7 +93,7 @@
     ctx.shadowBlur = playerSide === "right" ? 15 : 0;
     ctx.fillRect(
       FIELD_WIDTH - PADDLE_OFFSET - PADDLE_WIDTH,
-      state.rightPaddleY,
+      gameState.rightPaddleY,
       PADDLE_WIDTH,
       PADDLE_HEIGHT,
     );
@@ -92,14 +105,14 @@
     ctx.fillStyle = "#facc15";
     ctx.shadowColor = "#facc15";
     ctx.shadowBlur = 10;
-    ctx.fillRect(state.ballX, state.ballY, BALL_SIZE, BALL_SIZE);
+    ctx.fillRect(gameState.ballX, gameState.ballY, BALL_SIZE, BALL_SIZE);
     ctx.shadowBlur = 0;
   });
 </script>
 
-<div class="flex flex-col items-center gap-4">
+<div bind:this={container} class="flex h-full w-full flex-col items-center justify-center gap-4 min-h-0">
   <!-- Score display -->
-  <div class="flex w-full items-center justify-center gap-8 font-mono">
+  <div class="flex w-full shrink-0 items-center justify-center gap-8 font-mono">
     <div class="flex flex-col items-center gap-1">
       <span class="text-xs tracking-widest text-neutral-500 uppercase"
         >Player 1</span
@@ -107,7 +120,7 @@
       <span
         class="text-6xl font-bold text-neutral-400 tabular-nums drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]"
       >
-        {state.leftScore}
+        {gameState.leftScore}
       </span>
     </div>
     <span class="text-3xl text-neutral-700">:</span>
@@ -118,7 +131,7 @@
       <span
         class="text-6xl font-bold text-neutral-400 tabular-nums drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]"
       >
-        {state.rightScore}
+        {gameState.rightScore}
       </span>
     </div>
   </div>
