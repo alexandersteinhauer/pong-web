@@ -151,10 +151,12 @@ impl Game {
         let old_left_paddle_y = self.left_paddle_y;
         let old_right_paddle_y = self.right_paddle_y;
 
-        self.left_paddle_y =
-            (self.left_paddle_y + left_paddle_vy * dt).clamp(0.0, FIELD_HEIGHT - PADDLE_HEIGHT);
-        self.right_paddle_y =
-            (self.right_paddle_y + right_paddle_vy * dt).clamp(0.0, FIELD_HEIGHT - PADDLE_HEIGHT);
+        if !self.waiting_for_serve && !self.is_game_over() {
+            self.left_paddle_y =
+                (self.left_paddle_y + left_paddle_vy * dt).clamp(0.0, FIELD_HEIGHT - PADDLE_HEIGHT);
+            self.right_paddle_y = (self.right_paddle_y + right_paddle_vy * dt)
+                .clamp(0.0, FIELD_HEIGHT - PADDLE_HEIGHT);
+        }
 
         // Skip ball physics if waiting for serve
         if self.waiting_for_serve {
@@ -306,6 +308,10 @@ impl Game {
         self.ball_vy = 0.0;
         self.waiting_for_serve = true;
         self.serving_side = loser_side;
+
+        // Reset paddles
+        self.left_paddle_y = (FIELD_HEIGHT - PADDLE_HEIGHT) / 2.0;
+        self.right_paddle_y = (FIELD_HEIGHT - PADDLE_HEIGHT) / 2.0;
     }
 
     /// Launch the ball - called by the serving player
