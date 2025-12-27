@@ -85,7 +85,12 @@
     ctx.fillStyle = playerSide === "left" ? "#22d3ee" : "#fff";
     ctx.shadowColor = playerSide === "left" ? "#22d3ee" : "transparent";
     ctx.shadowBlur = playerSide === "left" ? 15 : 0;
-    ctx.fillRect(PADDLE_OFFSET, gameState.leftPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    ctx.fillRect(
+      PADDLE_OFFSET,
+      gameState.leftPaddleY,
+      PADDLE_WIDTH,
+      PADDLE_HEIGHT,
+    );
 
     // Right paddle
     ctx.fillStyle = playerSide === "right" ? "#22d3ee" : "#fff";
@@ -110,7 +115,10 @@
   });
 </script>
 
-<div bind:this={container} class="flex h-full w-full flex-col items-center justify-center gap-4 min-h-0">
+<div
+  bind:this={container}
+  class="flex h-full min-h-0 w-full flex-col items-center justify-center gap-4"
+>
   <!-- Score display -->
   <div class="flex w-full shrink-0 items-center justify-center gap-8 font-mono">
     <div class="flex flex-col items-center gap-1">

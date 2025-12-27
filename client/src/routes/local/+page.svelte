@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
+  import { browser } from "$app/environment";
   import { goto } from "$app/navigation";
   import GameCanvas from "$lib/components/GameCanvas.svelte";
   import {
@@ -251,8 +252,10 @@
     if (animationFrame) {
       cancelAnimationFrame(animationFrame);
     }
-    window.removeEventListener("keydown", onKeyDown);
-    window.removeEventListener("keyup", onKeyUp);
+    if (browser) {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    }
   });
 
   let overlay = $derived.by(() => {
@@ -278,7 +281,9 @@
   });
 </script>
 
-<div class="flex h-screen flex-col items-center gap-6 p-6 overflow-hidden bg-black text-white">
+<div
+  class="flex h-screen flex-col items-center gap-6 overflow-hidden bg-black p-6 text-white"
+>
   <header class="flex w-full max-w-[800px] shrink-0 items-center gap-6">
     <button
       class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
@@ -290,14 +295,14 @@
   </header>
 
   <main
-    class="flex w-full flex-1 items-center justify-center min-h-0"
+    class="flex min-h-0 w-full flex-1 items-center justify-center"
     ontouchstart={handleTouchStart}
     ontouchmove={handleTouchMove}
     ontouchend={handleTouchEnd}
     ontouchcancel={handleTouchEnd}
   >
     <GameCanvas
-      gameState={gameState}
+      {gameState}
       {overlay}
       showTouchZones={isTouchDevice && running}
     />
