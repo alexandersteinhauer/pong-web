@@ -121,31 +121,6 @@
   bind:this={container}
   class="flex h-full min-h-0 w-full flex-col items-center justify-center gap-4"
 >
-  <!-- Score display -->
-  <div class="flex w-full shrink-0 items-center justify-center gap-8 font-mono">
-    <div class="flex flex-col items-center gap-1">
-      <span class="text-xs tracking-widest text-neutral-500 uppercase"
-        >Player 1</span
-      >
-      <span
-        class="text-6xl font-bold text-neutral-400 tabular-nums drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-      >
-        {gameState.leftScore}
-      </span>
-    </div>
-    <span class="text-3xl text-neutral-700">:</span>
-    <div class="flex flex-col items-center gap-1">
-      <span class="text-xs tracking-widest text-neutral-500 uppercase"
-        >Player 2</span
-      >
-      <span
-        class="text-6xl font-bold text-neutral-400 tabular-nums drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-      >
-        {gameState.rightScore}
-      </span>
-    </div>
-  </div>
-
   <!-- Canvas wrapper with overlay -->
   <div class="relative touch-none">
     <canvas
@@ -154,6 +129,18 @@
       height={scaledHeight}
       class="block rounded border-2 border-neutral-800 bg-[#0a0a0a]"
     ></canvas>
+
+    <!-- Score display (integrated into canvas area) -->
+    <div
+      class="pointer-events-none absolute top-8 left-0 flex w-full justify-center gap-16 font-mono text-4xl font-bold opacity-30 select-none"
+    >
+      <span class="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+        {gameState.leftScore}
+      </span>
+      <span class="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+        {gameState.rightScore}
+      </span>
+    </div>
 
     <!-- Touch zone indicators -->
     {#if showTouchZones}
