@@ -4,7 +4,9 @@
 
 <div class="flex min-h-screen flex-col items-center gap-8 p-8">
   <header class="flex flex-1 items-center justify-center text-center">
-    <h1 class="font-geist text-8xl font-bold tracking-[0.3em] text-neutral-400">
+    <h1
+      class="font-geist text-6xl font-bold tracking-[0.3em] text-white [-webkit-text-fill-color:#262626] [-webkit-text-stroke:2px_currentColor]"
+    >
       PONG
     </h1>
   </header>
