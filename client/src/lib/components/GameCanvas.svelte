@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, type Snippet } from "svelte";
   import {
     FIELD_WIDTH,
     FIELD_HEIGHT,
@@ -24,6 +24,7 @@
     countdown?: number | null;
     playerSide?: "left" | "right" | null;
     showTouchZones?: boolean;
+    children?: Snippet;
   }
 
   let {
@@ -32,6 +33,7 @@
     countdown = null,
     playerSide = null,
     showTouchZones = false,
+    children,
   }: Props = $props();
 
   let canvas: HTMLCanvasElement;
@@ -192,7 +194,13 @@
     {/if}
 
     <!-- Text overlay -->
-    {#if overlay}
+    {#if children}
+      <div
+        class="pointer-events-auto absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-black/70"
+      >
+        {@render children()}
+      </div>
+    {:else if overlay}
       <div
         class="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded bg-black/70"
       >

@@ -2321,6 +2321,419 @@ export const pong = ($root.pong = (() => {
     return GameState;
   })();
 
+  pong.ClientMessage = (function () {
+    /**
+     * Properties of a ClientMessage.
+     * @memberof pong
+     * @interface IClientMessage
+     * @property {pong.IRematchRequest|null} [rematchRequest] ClientMessage rematchRequest
+     */
+
+    /**
+     * Constructs a new ClientMessage.
+     * @memberof pong
+     * @classdesc Represents a ClientMessage.
+     * @implements IClientMessage
+     * @constructor
+     * @param {pong.IClientMessage=} [properties] Properties to set
+     */
+    function ClientMessage(properties) {
+      if (properties)
+        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+          if (properties[keys[i]] != null) this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * ClientMessage rematchRequest.
+     * @member {pong.IRematchRequest|null|undefined} rematchRequest
+     * @memberof pong.ClientMessage
+     * @instance
+     */
+    ClientMessage.prototype.rematchRequest = null;
+
+    // OneOf field names bound to virtual getters and setters
+    let $oneOfFields;
+
+    /**
+     * ClientMessage payload.
+     * @member {"rematchRequest"|undefined} payload
+     * @memberof pong.ClientMessage
+     * @instance
+     */
+    Object.defineProperty(ClientMessage.prototype, "payload", {
+      get: $util.oneOfGetter(($oneOfFields = ["rematchRequest"])),
+      set: $util.oneOfSetter($oneOfFields),
+    });
+
+    /**
+     * Creates a new ClientMessage instance using the specified properties.
+     * @function create
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {pong.IClientMessage=} [properties] Properties to set
+     * @returns {pong.ClientMessage} ClientMessage instance
+     */
+    ClientMessage.create = function create(properties) {
+      return new ClientMessage(properties);
+    };
+
+    /**
+     * Encodes the specified ClientMessage message. Does not implicitly {@link pong.ClientMessage.verify|verify} messages.
+     * @function encode
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {pong.IClientMessage} message ClientMessage message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    ClientMessage.encode = function encode(message, writer) {
+      if (!writer) writer = $Writer.create();
+      if (
+        message.rematchRequest != null &&
+        Object.hasOwnProperty.call(message, "rematchRequest")
+      )
+        $root.pong.RematchRequest.encode(
+          message.rematchRequest,
+          writer.uint32(/* id 1, wireType 2 =*/ 10).fork(),
+        ).ldelim();
+      return writer;
+    };
+
+    /**
+     * Encodes the specified ClientMessage message, length delimited. Does not implicitly {@link pong.ClientMessage.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {pong.IClientMessage} message ClientMessage message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    ClientMessage.encodeDelimited = function encodeDelimited(message, writer) {
+      return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a ClientMessage message from the specified reader or buffer.
+     * @function decode
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {pong.ClientMessage} ClientMessage
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    ClientMessage.decode = function decode(reader, length, error) {
+      if (!(reader instanceof $Reader)) reader = $Reader.create(reader);
+      let end = length === undefined ? reader.len : reader.pos + length,
+        message = new $root.pong.ClientMessage();
+      while (reader.pos < end) {
+        let tag = reader.uint32();
+        if (tag === error) break;
+        switch (tag >>> 3) {
+          case 1: {
+            message.rematchRequest = $root.pong.RematchRequest.decode(
+              reader,
+              reader.uint32(),
+            );
+            break;
+          }
+          default:
+            reader.skipType(tag & 7);
+            break;
+        }
+      }
+      return message;
+    };
+
+    /**
+     * Decodes a ClientMessage message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {pong.ClientMessage} ClientMessage
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    ClientMessage.decodeDelimited = function decodeDelimited(reader) {
+      if (!(reader instanceof $Reader)) reader = new $Reader(reader);
+      return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a ClientMessage message.
+     * @function verify
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    ClientMessage.verify = function verify(message) {
+      if (typeof message !== "object" || message === null)
+        return "object expected";
+      let properties = {};
+      if (
+        message.rematchRequest != null &&
+        message.hasOwnProperty("rematchRequest")
+      ) {
+        properties.payload = 1;
+        {
+          let error = $root.pong.RematchRequest.verify(message.rematchRequest);
+          if (error) return "rematchRequest." + error;
+        }
+      }
+      return null;
+    };
+
+    /**
+     * Creates a ClientMessage message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {pong.ClientMessage} ClientMessage
+     */
+    ClientMessage.fromObject = function fromObject(object) {
+      if (object instanceof $root.pong.ClientMessage) return object;
+      let message = new $root.pong.ClientMessage();
+      if (object.rematchRequest != null) {
+        if (typeof object.rematchRequest !== "object")
+          throw TypeError(
+            ".pong.ClientMessage.rematchRequest: object expected",
+          );
+        message.rematchRequest = $root.pong.RematchRequest.fromObject(
+          object.rematchRequest,
+        );
+      }
+      return message;
+    };
+
+    /**
+     * Creates a plain object from a ClientMessage message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {pong.ClientMessage} message ClientMessage
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    ClientMessage.toObject = function toObject(message, options) {
+      if (!options) options = {};
+      let object = {};
+      if (
+        message.rematchRequest != null &&
+        message.hasOwnProperty("rematchRequest")
+      ) {
+        object.rematchRequest = $root.pong.RematchRequest.toObject(
+          message.rematchRequest,
+          options,
+        );
+        if (options.oneofs) object.payload = "rematchRequest";
+      }
+      return object;
+    };
+
+    /**
+     * Converts this ClientMessage to JSON.
+     * @function toJSON
+     * @memberof pong.ClientMessage
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    ClientMessage.prototype.toJSON = function toJSON() {
+      return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for ClientMessage
+     * @function getTypeUrl
+     * @memberof pong.ClientMessage
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    ClientMessage.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+      if (typeUrlPrefix === undefined) {
+        typeUrlPrefix = "type.googleapis.com";
+      }
+      return typeUrlPrefix + "/pong.ClientMessage";
+    };
+
+    return ClientMessage;
+  })();
+
+  pong.RematchRequest = (function () {
+    /**
+     * Properties of a RematchRequest.
+     * @memberof pong
+     * @interface IRematchRequest
+     */
+
+    /**
+     * Constructs a new RematchRequest.
+     * @memberof pong
+     * @classdesc Represents a RematchRequest.
+     * @implements IRematchRequest
+     * @constructor
+     * @param {pong.IRematchRequest=} [properties] Properties to set
+     */
+    function RematchRequest(properties) {
+      if (properties)
+        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+          if (properties[keys[i]] != null) this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * Creates a new RematchRequest instance using the specified properties.
+     * @function create
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {pong.IRematchRequest=} [properties] Properties to set
+     * @returns {pong.RematchRequest} RematchRequest instance
+     */
+    RematchRequest.create = function create(properties) {
+      return new RematchRequest(properties);
+    };
+
+    /**
+     * Encodes the specified RematchRequest message. Does not implicitly {@link pong.RematchRequest.verify|verify} messages.
+     * @function encode
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {pong.IRematchRequest} message RematchRequest message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    RematchRequest.encode = function encode(message, writer) {
+      if (!writer) writer = $Writer.create();
+      return writer;
+    };
+
+    /**
+     * Encodes the specified RematchRequest message, length delimited. Does not implicitly {@link pong.RematchRequest.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {pong.IRematchRequest} message RematchRequest message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    RematchRequest.encodeDelimited = function encodeDelimited(message, writer) {
+      return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a RematchRequest message from the specified reader or buffer.
+     * @function decode
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {pong.RematchRequest} RematchRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    RematchRequest.decode = function decode(reader, length, error) {
+      if (!(reader instanceof $Reader)) reader = $Reader.create(reader);
+      let end = length === undefined ? reader.len : reader.pos + length,
+        message = new $root.pong.RematchRequest();
+      while (reader.pos < end) {
+        let tag = reader.uint32();
+        if (tag === error) break;
+        switch (tag >>> 3) {
+          default:
+            reader.skipType(tag & 7);
+            break;
+        }
+      }
+      return message;
+    };
+
+    /**
+     * Decodes a RematchRequest message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {pong.RematchRequest} RematchRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    RematchRequest.decodeDelimited = function decodeDelimited(reader) {
+      if (!(reader instanceof $Reader)) reader = new $Reader(reader);
+      return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a RematchRequest message.
+     * @function verify
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    RematchRequest.verify = function verify(message) {
+      if (typeof message !== "object" || message === null)
+        return "object expected";
+      return null;
+    };
+
+    /**
+     * Creates a RematchRequest message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {pong.RematchRequest} RematchRequest
+     */
+    RematchRequest.fromObject = function fromObject(object) {
+      if (object instanceof $root.pong.RematchRequest) return object;
+      return new $root.pong.RematchRequest();
+    };
+
+    /**
+     * Creates a plain object from a RematchRequest message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {pong.RematchRequest} message RematchRequest
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    RematchRequest.toObject = function toObject() {
+      return {};
+    };
+
+    /**
+     * Converts this RematchRequest to JSON.
+     * @function toJSON
+     * @memberof pong.RematchRequest
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    RematchRequest.prototype.toJSON = function toJSON() {
+      return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for RematchRequest
+     * @function getTypeUrl
+     * @memberof pong.RematchRequest
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    RematchRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+      if (typeUrlPrefix === undefined) {
+        typeUrlPrefix = "type.googleapis.com";
+      }
+      return typeUrlPrefix + "/pong.RematchRequest";
+    };
+
+    return RematchRequest;
+  })();
+
   pong.PlayerInput = (function () {
     /**
      * Properties of a PlayerInput.

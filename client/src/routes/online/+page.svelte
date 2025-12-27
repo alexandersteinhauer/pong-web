@@ -30,6 +30,7 @@
   let winner = $state<number | null>(null);
   let intentionalDisconnect = false;
   let isTouchDevice = $state(false);
+  let rematchRequested = $state(false);
 
   let gameState = $state<GameState>({
     ballX: 395,
@@ -194,6 +195,12 @@
     }
   }
 
+  function requestRematch() {
+    if (!transport) return;
+    rematchRequested = true;
+    transport.requestRematch();
+  }
+
   function createRoom() {
     mode = "creating";
     error = null;
@@ -202,6 +209,9 @@
     transport = new PongTransport({
       onStatusChange: (s) => {
         status = s;
+        if (s === "countdown") {
+          rematchRequested = false;
+        }
         if (s === "playing") {
           startInputLoop();
         } else if (
@@ -260,6 +270,9 @@
     transport = new PongTransport({
       onStatusChange: (s) => {
         status = s;
+        if (s === "countdown") {
+          rematchRequested = false;
+        }
         if (s === "playing") {
           startInputLoop();
         } else if (
@@ -317,6 +330,7 @@
     side = null;
     countdown = null;
     winner = null;
+    rematchRequested = false;
   }
 
   function leaveGame() {
@@ -416,11 +430,40 @@
     >
       <GameCanvas
         gameState={displayGameState}
-        {overlay}
         countdown={displayCountdown}
         playerSide={preferredSide}
         showTouchZones={isTouchDevice && status === "playing"}
-      />
+      >
+        {#if overlay}
+          {#each overlay.split("\n") as line}
+            <span
+              class="font-mono text-3xl font-bold text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+            >
+              {line}
+            </span>
+          {/each}
+        {/if}
+
+        {#if status === "game_over" && winner !== null}
+          <div class="mt-8 flex flex-col items-center gap-4">
+            {#if rematchRequested}
+              <div class="flex items-center gap-2 text-neutral-400">
+                <div
+                  class="h-4 w-4 animate-spin rounded-full border-2 border-neutral-600 border-t-white"
+                ></div>
+                <span>Waiting for opponent...</span>
+              </div>
+            {:else}
+              <button
+                class="cursor-pointer rounded bg-white px-6 py-3 font-bold text-black transition-colors hover:bg-neutral-200"
+                onclick={requestRematch}
+              >
+                Rematch
+              </button>
+            {/if}
+          </div>
+        {/if}
+      </GameCanvas>
     </main>
 
     <footer

@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc;
 use wtransport::Connection;
@@ -166,11 +167,13 @@ async fn handle_join_room(conn: Connection, code: String, rooms: RoomManager) {
 struct PlayerConnection {
     conn: Arc<Connection>,
     reliable_tx: mpsc::Sender<ServerMessage>,
+    client_msg_rx: mpsc::Receiver<ClientMessage>,
 }
 
 impl PlayerConnection {
     fn new(conn: Arc<Connection>) -> Self {
         let (reliable_tx, mut reliable_rx) = mpsc::channel::<ServerMessage>(32);
+        let (client_msg_tx, client_msg_rx) = mpsc::channel::<ClientMessage>(32);
 
         // Spawn a task to send reliable messages sequentially
         let conn_clone = conn.clone();
@@ -190,7 +193,38 @@ impl PlayerConnection {
             }
         });
 
-        Self { conn, reliable_tx }
+        // Spawn a task to receive reliable messages (streams opened by client)
+        let conn_clone_recv = conn.clone();
+        tokio::spawn(async move {
+            loop {
+                match conn_clone_recv.accept_uni().await {
+                    Ok(stream) => {
+                        let mut stream = stream;
+                        // Read all bytes
+                        let mut buf = Vec::new();
+                        if stream.read_to_end(&mut buf).await.is_ok() {
+                            // Parse: 2 bytes length prefix + message
+                            if buf.len() >= 2 {
+                                let len = u16::from_le_bytes([buf[0], buf[1]]) as usize;
+                                if buf.len() >= 2 + len {
+                                    let msg_buf = &buf[2..2 + len];
+                                    if let Ok(msg) = ClientMessage::decode(msg_buf) {
+                                        let _ = client_msg_tx.send(msg).await;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Err(_) => break, // Connection closed
+                }
+            }
+        });
+
+        Self {
+            conn,
+            reliable_tx,
+            client_msg_rx,
+        }
     }
 
     async fn send_reliable(&self, msg: ServerMessage) -> bool {
@@ -203,58 +237,8 @@ impl PlayerConnection {
 }
 
 async fn run_match(left_conn: Connection, right_conn: Connection) {
-    let left = PlayerConnection::new(Arc::new(left_conn));
-    let right = PlayerConnection::new(Arc::new(right_conn));
-
-    // Assign sides (reliable)
-    let left_msg = ServerMessage {
-        payload: Some(server_message::Payload::AssignSide(AssignSide {
-            side: Side::Left as i32,
-        })),
-    };
-    if !left.send_reliable(left_msg).await {
-        println!("Left player disconnected before game start");
-        let msg = ServerMessage {
-            payload: Some(server_message::Payload::OpponentLeft(OpponentLeft {})),
-        };
-        let _ = right.send_reliable(msg).await;
-        return;
-    }
-
-    let right_msg = ServerMessage {
-        payload: Some(server_message::Payload::AssignSide(AssignSide {
-            side: Side::Right as i32,
-        })),
-    };
-    if !right.send_reliable(right_msg).await {
-        println!("Right player disconnected before game start");
-        let msg = ServerMessage {
-            payload: Some(server_message::Payload::OpponentLeft(OpponentLeft {})),
-        };
-        let _ = left.send_reliable(msg).await;
-        return;
-    }
-
-    // Countdown (reliable)
-    for i in (1..=COUNTDOWN_SECONDS).rev() {
-        let msg = ServerMessage {
-            payload: Some(server_message::Payload::Countdown(Countdown { seconds: i })),
-        };
-        if !left.send_reliable(msg.clone()).await || !right.send_reliable(msg).await {
-            println!("Player disconnected during countdown");
-            return;
-        }
-        tokio::time::sleep(Duration::from_secs(1)).await;
-    }
-
-    // Start signal - countdown 0 (reliable)
-    let start_msg = ServerMessage {
-        payload: Some(server_message::Payload::Countdown(Countdown { seconds: 0 })),
-    };
-    if !left.send_reliable(start_msg.clone()).await || !right.send_reliable(start_msg).await {
-        println!("Player disconnected at game start");
-        return;
-    }
+    let mut left = PlayerConnection::new(Arc::new(left_conn));
+    let mut right = PlayerConnection::new(Arc::new(right_conn));
 
     let (left_input_tx, mut left_input_rx) = mpsc::channel::<i32>(16);
     let (right_input_tx, mut right_input_rx) = mpsc::channel::<i32>(16);
@@ -298,70 +282,168 @@ async fn run_match(left_conn: Connection, right_conn: Connection) {
         }
     });
 
-    let mut game = Game::new();
-    let mut last_tick = Instant::now();
-
     loop {
-        tokio::select! {
-            Some(who) = disconnect_rx.recv() => {
-                println!("{} player disconnected", who);
-                let msg = ServerMessage {
-                    payload: Some(server_message::Payload::OpponentLeft(OpponentLeft {})),
-                };
-                if who == "left" {
-                    let _ = right.send_reliable(msg).await;
-                } else {
-                    let _ = left.send_reliable(msg).await;
-                }
+        // Drain any stale inputs from previous games
+        while left_input_rx.try_recv().is_ok() {}
+        while right_input_rx.try_recv().is_ok() {}
+
+        // Assign sides (reliable)
+        let left_msg = ServerMessage {
+            payload: Some(server_message::Payload::AssignSide(AssignSide {
+                side: Side::Left as i32,
+            })),
+        };
+        if !left.send_reliable(left_msg).await {
+            println!("Left player disconnected before game start");
+            notify_opponent_left(&right).await;
+            return;
+        }
+
+        let right_msg = ServerMessage {
+            payload: Some(server_message::Payload::AssignSide(AssignSide {
+                side: Side::Right as i32,
+            })),
+        };
+        if !right.send_reliable(right_msg).await {
+            println!("Right player disconnected before game start");
+            notify_opponent_left(&left).await;
+            return;
+        }
+
+        // Countdown (reliable)
+        let mut countdown_aborted = false;
+        for i in (1..=COUNTDOWN_SECONDS).rev() {
+            let msg = ServerMessage {
+                payload: Some(server_message::Payload::Countdown(Countdown { seconds: i })),
+            };
+            if !left.send_reliable(msg.clone()).await || !right.send_reliable(msg).await {
+                println!("Player disconnected during countdown");
+                countdown_aborted = true;
                 break;
             }
-            _ = tokio::time::sleep(TICK_DURATION.saturating_sub(last_tick.elapsed())) => {
-                let dt = last_tick.elapsed().as_secs_f64();
-                last_tick = Instant::now();
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+        if countdown_aborted {
+            return;
+        }
 
-                while let Ok(input) = left_input_rx.try_recv() {
-                    // Input 2 means launch ball (if it's left player's turn to serve)
-                    if input == 2 {
-                        game.launch_ball(0);
+        // Start signal - countdown 0 (reliable)
+        let start_msg = ServerMessage {
+            payload: Some(server_message::Payload::Countdown(Countdown { seconds: 0 })),
+        };
+        if !left.send_reliable(start_msg.clone()).await || !right.send_reliable(start_msg).await {
+            println!("Player disconnected at game start");
+            return;
+        }
+
+        let mut game = Game::new();
+        let mut last_tick = Instant::now();
+
+        loop {
+            tokio::select! {
+                Some(who) = disconnect_rx.recv() => {
+                    println!("{} player disconnected", who);
+                    if who == "left" {
+                        notify_opponent_left(&right).await;
                     } else {
-                        game.left_paddle_input = input as f64;
+                        notify_opponent_left(&left).await;
                     }
+                    return; // End session
                 }
-                while let Ok(input) = right_input_rx.try_recv() {
-                    // Input 2 means launch ball (if it's right player's turn to serve)
-                    if input == 2 {
-                        game.launch_ball(1);
-                    } else {
-                        game.right_paddle_input = input as f64;
+                _ = tokio::time::sleep(TICK_DURATION.saturating_sub(last_tick.elapsed())) => {
+                    let dt = last_tick.elapsed().as_secs_f64();
+                    last_tick = Instant::now();
+
+                    while let Ok(input) = left_input_rx.try_recv() {
+                        if input == 2 {
+                            game.launch_ball(0);
+                        } else {
+                            game.left_paddle_input = input as f64;
+                        }
                     }
-                }
+                    while let Ok(input) = right_input_rx.try_recv() {
+                        if input == 2 {
+                            game.launch_ball(1);
+                        } else {
+                            game.right_paddle_input = input as f64;
+                        }
+                    }
 
-                game.update(dt);
+                    game.update(dt);
 
-                // Check for game over (send reliably)
-                if game.is_game_over() {
-                    let winner = game.winner();
-                    let msg = ServerMessage {
-                        payload: Some(server_message::Payload::GameOver(GameOver {
-                            winner: if winner == 0 { Side::Left as i32 } else { Side::Right as i32 },
-                        })),
-                    };
-                    let _ = left.send_reliable(msg.clone()).await;
-                    let _ = right.send_reliable(msg).await;
-                    println!("Game over! Winner: {}", if winner == 0 { "left" } else { "right" });
-                    break;
-                }
+                    // Check for game over (send reliably)
+                    if game.is_game_over() {
+                        let winner = game.winner();
+                        let msg = ServerMessage {
+                            payload: Some(server_message::Payload::GameOver(GameOver {
+                                winner: if winner == 0 { Side::Left as i32 } else { Side::Right as i32 },
+                            })),
+                        };
+                        let _ = left.send_reliable(msg.clone()).await;
+                        let _ = right.send_reliable(msg).await;
+                        println!("Game over! Winner: {}", if winner == 0 { "left" } else { "right" });
+                        break;
+                    }
 
-                // Send game state via datagram (unreliable, fast)
-                let state = encode_state(&game);
-                if !left.send_datagram(&state) || !right.send_datagram(&state) {
-                    break;
+                    // Send game state via datagram (unreliable, fast)
+                    let state = encode_state(&game);
+                    if !left.send_datagram(&state) || !right.send_datagram(&state) {
+                         // Datagram failure might indicate disconnect, but we rely on other mechanisms or next loop to catch it
+                    }
                 }
             }
         }
-    }
 
-    println!("Match ended");
+        // Wait for rematch
+        println!("Waiting for rematch...");
+        let mut left_wants_rematch = false;
+        let mut right_wants_rematch = false;
+
+        // Drain any messages that might have come during game (unlikely for rematch, but good practice)
+        while left.client_msg_rx.try_recv().is_ok() {}
+        while right.client_msg_rx.try_recv().is_ok() {}
+
+        loop {
+            tokio::select! {
+                Some(who) = disconnect_rx.recv() => {
+                    println!("{} player disconnected during rematch wait", who);
+                    if who == "left" {
+                        notify_opponent_left(&right).await;
+                    } else {
+                        notify_opponent_left(&left).await;
+                    }
+                    return;
+                }
+                Some(msg) = left.client_msg_rx.recv() => {
+                    if let Some(client_message::Payload::RematchRequest(_)) = msg.payload {
+                         left_wants_rematch = true;
+                         println!("Left player requested rematch");
+                         // Optional: Notify right player?
+                         // Protocol doesn't have "OpponentRequestedRematch" message yet, but "Waiting" might suffice or custom state.
+                         // For now, just wait silently until both agree.
+                    }
+                }
+                Some(msg) = right.client_msg_rx.recv() => {
+                    if let Some(client_message::Payload::RematchRequest(_)) = msg.payload {
+                         right_wants_rematch = true;
+                         println!("Right player requested rematch");
+                    }
+                }
+            }
+
+            if left_wants_rematch && right_wants_rematch {
+                println!("Both players agreed to rematch. Restarting...");
+                break; // Restart loop
+            }
+        }
+    }
+}
+
+async fn notify_opponent_left(conn: &PlayerConnection) {
+    let msg = ServerMessage {
+        payload: Some(server_message::Payload::OpponentLeft(OpponentLeft {})),
+    };
+    let _ = conn.send_reliable(msg).await;
 }
 
 fn encode_state(game: &Game) -> Vec<u8> {

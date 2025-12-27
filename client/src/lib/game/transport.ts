@@ -267,6 +267,33 @@ export class PongTransport {
     });
   }
 
+  async requestRematch(): Promise<void> {
+    if (!this.transport) return;
+
+    try {
+      const stream = await this.transport.createUnidirectionalStream();
+      const writer = stream.getWriter();
+
+      const msg = pong.ClientMessage.create({
+        rematchRequest: pong.RematchRequest.create({}),
+      });
+      const encoded = pong.ClientMessage.encode(msg).finish();
+
+      // Prefix with length (2 bytes, little endian)
+      const len = encoded.length;
+      const buf = new Uint8Array(2 + len);
+      buf[0] = len & 0xff;
+      buf[1] = (len >> 8) & 0xff;
+      buf.set(encoded, 2);
+
+      await writer.write(buf);
+      await writer.close();
+      console.log("Rematch request sent");
+    } catch (err) {
+      console.error("Failed to send rematch request:", err);
+    }
+  }
+
   close(): void {
     this.running = false;
     if (this.transport) {

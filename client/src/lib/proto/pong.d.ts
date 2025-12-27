@@ -1059,6 +1059,223 @@ export namespace pong {
     public static getTypeUrl(typeUrlPrefix?: string): string;
   }
 
+  /** Properties of a ClientMessage. */
+  interface IClientMessage {
+    /** ClientMessage rematchRequest */
+    rematchRequest?: pong.IRematchRequest | null;
+  }
+
+  /** Represents a ClientMessage. */
+  class ClientMessage implements IClientMessage {
+    /**
+     * Constructs a new ClientMessage.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: pong.IClientMessage);
+
+    /** ClientMessage rematchRequest. */
+    public rematchRequest?: pong.IRematchRequest | null;
+
+    /** ClientMessage payload. */
+    public payload?: "rematchRequest";
+
+    /**
+     * Creates a new ClientMessage instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns ClientMessage instance
+     */
+    public static create(properties?: pong.IClientMessage): pong.ClientMessage;
+
+    /**
+     * Encodes the specified ClientMessage message. Does not implicitly {@link pong.ClientMessage.verify|verify} messages.
+     * @param message ClientMessage message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(
+      message: pong.IClientMessage,
+      writer?: $protobuf.Writer,
+    ): $protobuf.Writer;
+
+    /**
+     * Encodes the specified ClientMessage message, length delimited. Does not implicitly {@link pong.ClientMessage.verify|verify} messages.
+     * @param message ClientMessage message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(
+      message: pong.IClientMessage,
+      writer?: $protobuf.Writer,
+    ): $protobuf.Writer;
+
+    /**
+     * Decodes a ClientMessage message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns ClientMessage
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(
+      reader: $protobuf.Reader | Uint8Array,
+      length?: number,
+    ): pong.ClientMessage;
+
+    /**
+     * Decodes a ClientMessage message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns ClientMessage
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(
+      reader: $protobuf.Reader | Uint8Array,
+    ): pong.ClientMessage;
+
+    /**
+     * Verifies a ClientMessage message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): string | null;
+
+    /**
+     * Creates a ClientMessage message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns ClientMessage
+     */
+    public static fromObject(object: { [k: string]: any }): pong.ClientMessage;
+
+    /**
+     * Creates a plain object from a ClientMessage message. Also converts values to other types if specified.
+     * @param message ClientMessage
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(
+      message: pong.ClientMessage,
+      options?: $protobuf.IConversionOptions,
+    ): { [k: string]: any };
+
+    /**
+     * Converts this ClientMessage to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for ClientMessage
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+  }
+
+  /** Properties of a RematchRequest. */
+  interface IRematchRequest {}
+
+  /** Represents a RematchRequest. */
+  class RematchRequest implements IRematchRequest {
+    /**
+     * Constructs a new RematchRequest.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: pong.IRematchRequest);
+
+    /**
+     * Creates a new RematchRequest instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns RematchRequest instance
+     */
+    public static create(
+      properties?: pong.IRematchRequest,
+    ): pong.RematchRequest;
+
+    /**
+     * Encodes the specified RematchRequest message. Does not implicitly {@link pong.RematchRequest.verify|verify} messages.
+     * @param message RematchRequest message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(
+      message: pong.IRematchRequest,
+      writer?: $protobuf.Writer,
+    ): $protobuf.Writer;
+
+    /**
+     * Encodes the specified RematchRequest message, length delimited. Does not implicitly {@link pong.RematchRequest.verify|verify} messages.
+     * @param message RematchRequest message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(
+      message: pong.IRematchRequest,
+      writer?: $protobuf.Writer,
+    ): $protobuf.Writer;
+
+    /**
+     * Decodes a RematchRequest message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns RematchRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(
+      reader: $protobuf.Reader | Uint8Array,
+      length?: number,
+    ): pong.RematchRequest;
+
+    /**
+     * Decodes a RematchRequest message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns RematchRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(
+      reader: $protobuf.Reader | Uint8Array,
+    ): pong.RematchRequest;
+
+    /**
+     * Verifies a RematchRequest message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): string | null;
+
+    /**
+     * Creates a RematchRequest message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns RematchRequest
+     */
+    public static fromObject(object: { [k: string]: any }): pong.RematchRequest;
+
+    /**
+     * Creates a plain object from a RematchRequest message. Also converts values to other types if specified.
+     * @param message RematchRequest
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(
+      message: pong.RematchRequest,
+      options?: $protobuf.IConversionOptions,
+    ): { [k: string]: any };
+
+    /**
+     * Converts this RematchRequest to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for RematchRequest
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+  }
+
   /** Properties of a PlayerInput. */
   interface IPlayerInput {
     /** PlayerInput direction */
