@@ -31,6 +31,7 @@
   let intentionalDisconnect = false;
   let isTouchDevice = $state(false);
   let rematchRequested = $state(false);
+  let fullscreen = $state(false);
 
   let gameState = $state<GameState>({
     ballX: 395,
@@ -94,6 +95,11 @@
     }
 
     if (e.key === "Escape") {
+      e.preventDefault();
+      if (fullscreen) {
+        fullscreen = false;
+        return;
+      }
       leaveGame();
     }
   }
@@ -397,29 +403,39 @@
 {#if mode === "playing"}
   <!-- Game View -->
   <div
-    class="flex h-screen flex-col items-center gap-6 overflow-hidden bg-[#050505] p-6 text-white"
+    class="flex h-screen flex-col items-center overflow-hidden bg-[#050505] text-white transition-all duration-300 {fullscreen
+      ? 'gap-0 p-0'
+      : 'gap-6 p-6'}"
   >
-    <header class="flex w-full shrink-0 items-center gap-6">
-      <button
-        class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-red-500 hover:text-red-500"
-        onclick={leaveGame}
-      >
-        ← Leave
-      </button>
-      <h1 class="flex-1 text-xl font-bold text-neutral-500">
-        Room: {roomCode}
-      </h1>
-      {#if preferredSide}
-        <span
-          class="rounded px-3 py-1.5 text-xs font-bold tracking-wide uppercase {preferredSide ===
-          'left'
-            ? 'border border-cyan-400/30 bg-cyan-400/15 text-cyan-400'
-            : 'border border-yellow-400/30 bg-yellow-400/15 text-yellow-400'}"
+    {#if !fullscreen}
+      <header class="flex w-full shrink-0 items-center gap-6">
+        <button
+          class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-red-500 hover:text-red-500"
+          onclick={leaveGame}
         >
-          You: {preferredSide === "left" ? "Left" : "Right"}
-        </span>
-      {/if}
-    </header>
+          ← Leave
+        </button>
+        <h1 class="flex-1 text-xl font-bold text-neutral-500">
+          Room: {roomCode}
+        </h1>
+        <button
+          class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
+          onclick={() => (fullscreen = true)}
+        >
+          Focus Mode
+        </button>
+        {#if preferredSide}
+          <span
+            class="rounded px-3 py-1.5 text-xs font-bold tracking-wide uppercase {preferredSide ===
+            'left'
+              ? 'border border-cyan-400/30 bg-cyan-400/15 text-cyan-400'
+              : 'border border-yellow-400/30 bg-yellow-400/15 text-yellow-400'}"
+          >
+            You: {preferredSide === "left" ? "Left" : "Right"}
+          </span>
+        {/if}
+      </header>
+    {/if}
 
     <main
       class="flex min-h-0 w-full flex-1 items-center justify-center"
@@ -433,6 +449,7 @@
         countdown={displayCountdown}
         playerSide={preferredSide}
         showTouchZones={isTouchDevice && status === "playing"}
+        {fullscreen}
       >
         {#if overlay}
           {#each overlay.split("\n") as line}
@@ -466,44 +483,46 @@
       </GameCanvas>
     </main>
 
-    <footer
-      class="flex shrink-0 items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
-    >
-      <div class="flex flex-col items-center gap-2">
-        <span class="text-xs tracking-widest text-neutral-500 uppercase"
-          >Your controls</span
-        >
-        {#if isTouchDevice}
-          <span class="text-sm text-cyan-400"
-            >Touch where you want the paddle</span
+    {#if !fullscreen}
+      <footer
+        class="flex shrink-0 items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
+      >
+        <div class="flex flex-col items-center gap-2">
+          <span class="text-xs tracking-widest text-neutral-500 uppercase"
+            >Your controls</span
           >
-        {:else}
-          <div class="flex items-center gap-8">
-            <div class="flex gap-2">
-              <kbd
-                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-                >W</kbd
-              >
-              <kbd
-                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-                >S</kbd
-              >
+          {#if isTouchDevice}
+            <span class="text-sm text-cyan-400"
+              >Touch where you want the paddle</span
+            >
+          {:else}
+            <div class="flex items-center gap-8">
+              <div class="flex gap-2">
+                <kbd
+                  class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                  >W</kbd
+                >
+                <kbd
+                  class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                  >S</kbd
+                >
+              </div>
+              <span class="text-xs text-neutral-600">OR</span>
+              <div class="flex gap-2">
+                <kbd
+                  class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                  >↑</kbd
+                >
+                <kbd
+                  class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                  >↓</kbd
+                >
+              </div>
             </div>
-            <span class="text-xs text-neutral-600">OR</span>
-            <div class="flex gap-2">
-              <kbd
-                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-                >↑</kbd
-              >
-              <kbd
-                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-                >↓</kbd
-              >
-            </div>
-          </div>
-        {/if}
-      </div>
-    </footer>
+          {/if}
+        </div>
+      </footer>
+    {/if}
   </div>
 {:else}
   <!-- Lobby View -->

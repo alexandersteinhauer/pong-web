@@ -19,6 +19,7 @@
   let winner = $state<number>(-1);
   let loading = $state(true);
   let isTouchDevice = $state(false);
+  let fullscreen = $state(false);
 
   let gameState = $state({
     ballX: 395,
@@ -143,8 +144,9 @@
     }
 
     // Back to menu on Escape
-    if (e.key === "Escape") {
-      goto("/");
+    if (e.key === "Escape" && fullscreen) {
+      e.preventDefault();
+      fullscreen = false;
     }
   }
 
@@ -282,17 +284,28 @@
 </script>
 
 <div
-  class="flex h-screen flex-col items-center gap-6 overflow-hidden bg-[#050505] p-6 text-white"
+  class="flex h-screen flex-col items-center overflow-hidden bg-[#050505] text-white transition-all duration-300 {fullscreen
+    ? 'gap-0 p-0'
+    : 'gap-6 p-6'}"
 >
-  <header class="flex w-full shrink-0 items-center gap-6">
-    <button
-      class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
-      onclick={() => goto("/")}
-    >
-      ← Back
-    </button>
-    <h1 class="text-xl font-bold text-neutral-500">Local Multiplayer</h1>
-  </header>
+  {#if !fullscreen}
+    <header class="flex w-full shrink-0 items-center gap-6">
+      <button
+        class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
+        onclick={() => goto("/")}
+      >
+        ← Back
+      </button>
+      <h1 class="text-xl font-bold text-neutral-500">Local Multiplayer</h1>
+      <div class="flex-1"></div>
+      <button
+        class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
+        onclick={() => (fullscreen = true)}
+      >
+        Focus Mode
+      </button>
+    </header>
+  {/if}
 
   <main
     class="flex min-h-0 w-full flex-1 items-center justify-center"
@@ -305,58 +318,61 @@
       {gameState}
       {overlay}
       showTouchZones={isTouchDevice && running}
+      {fullscreen}
     />
   </main>
 
-  <footer
-    class="flex shrink-0 items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
-  >
-    {#if isTouchDevice}
-      <div class="flex flex-col items-center gap-2">
-        <span class="text-xs tracking-widest text-neutral-500 uppercase"
-          >Player 1</span
-        >
-        <span class="text-sm text-cyan-400">Touch left side</span>
-      </div>
-      <div class="h-12 w-px bg-neutral-800"></div>
-      <div class="flex flex-col items-center gap-2">
-        <span class="text-xs tracking-widest text-neutral-500 uppercase"
-          >Player 2</span
-        >
-        <span class="text-sm text-cyan-400">Touch right side</span>
-      </div>
-    {:else}
-      <div class="flex flex-col items-center gap-2">
-        <span class="text-xs tracking-widest text-neutral-500 uppercase"
-          >Player 1</span
-        >
-        <div class="flex gap-2">
-          <kbd
-            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-            >W</kbd
+  {#if !fullscreen}
+    <footer
+      class="flex shrink-0 items-center gap-8 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-4"
+    >
+      {#if isTouchDevice}
+        <div class="flex flex-col items-center gap-2">
+          <span class="text-xs tracking-widest text-neutral-500 uppercase"
+            >Player 1</span
           >
-          <kbd
-            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-            >S</kbd
-          >
+          <span class="text-sm text-cyan-400">Touch left side</span>
         </div>
-      </div>
-      <div class="h-12 w-px bg-neutral-800"></div>
-      <div class="flex flex-col items-center gap-2">
-        <span class="text-xs tracking-widest text-neutral-500 uppercase"
-          >Player 2</span
-        >
-        <div class="flex gap-2">
-          <kbd
-            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-            >↑</kbd
+        <div class="h-12 w-px bg-neutral-800"></div>
+        <div class="flex flex-col items-center gap-2">
+          <span class="text-xs tracking-widest text-neutral-500 uppercase"
+            >Player 2</span
           >
-          <kbd
-            class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-            >↓</kbd
-          >
+          <span class="text-sm text-cyan-400">Touch right side</span>
         </div>
-      </div>
-    {/if}
-  </footer>
+      {:else}
+        <div class="flex flex-col items-center gap-2">
+          <span class="text-xs tracking-widest text-neutral-500 uppercase"
+            >Player 1</span
+          >
+          <div class="flex gap-2">
+            <kbd
+              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+              >W</kbd
+            >
+            <kbd
+              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+              >S</kbd
+            >
+          </div>
+        </div>
+        <div class="h-12 w-px bg-neutral-800"></div>
+        <div class="flex flex-col items-center gap-2">
+          <span class="text-xs tracking-widest text-neutral-500 uppercase"
+            >Player 2</span
+          >
+          <div class="flex gap-2">
+            <kbd
+              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+              >↑</kbd
+            >
+            <kbd
+              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+              >↓</kbd
+            >
+          </div>
+        </div>
+      {/if}
+    </footer>
+  {/if}
 </div>

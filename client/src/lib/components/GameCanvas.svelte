@@ -24,6 +24,7 @@
     countdown?: number | null;
     playerSide?: "left" | "right" | null;
     showTouchZones?: boolean;
+    fullscreen?: boolean;
     children?: Snippet;
   }
 
@@ -33,6 +34,7 @@
     countdown = null,
     playerSide = null,
     showTouchZones = false,
+    fullscreen = false,
     children,
   }: Props = $props();
 
@@ -53,10 +55,9 @@
       const entry = entries[0];
       if (entry) {
         const { width, height } = entry.contentRect;
-        // Calculate scale to fit FIELD_WIDTH x FIELD_HEIGHT into width x height
         const scaleX = width / FIELD_WIDTH;
         const scaleY = height / FIELD_HEIGHT;
-        scale = Math.min(scaleX, scaleY, 1); // Max scale of 1 to keep it crisp
+        scale = Math.min(scaleX, scaleY);
       }
     });
 
@@ -68,6 +69,9 @@
     if (!ctx) return;
     ctx.resetTransform();
     ctx.scale(scale, scale);
+
+    // Disable smoothing for crisp pixels
+    ctx.imageSmoothingEnabled = false;
 
     // Clear
     ctx.fillStyle = "#0a0a0a";
@@ -119,7 +123,9 @@
 
 <div
   bind:this={container}
-  class="flex h-full min-h-0 w-full flex-col items-center justify-center gap-4"
+  class="flex h-full min-h-0 w-full flex-col items-center justify-center {fullscreen
+    ? 'gap-0'
+    : 'gap-4'}"
 >
   <!-- Canvas wrapper with overlay -->
   <div class="relative touch-none">
@@ -127,7 +133,9 @@
       bind:this={canvas}
       width={scaledWidth}
       height={scaledHeight}
-      class="block rounded border-2 border-neutral-800 bg-[#0a0a0a]"
+      class="block {fullscreen
+        ? ''
+        : 'rounded border-2 border-neutral-800'} bg-[#0a0a0a]"
     ></canvas>
 
     <!-- Score display (integrated into canvas area) -->
@@ -203,7 +211,7 @@
   </div>
 
   <!-- Player indicator -->
-  {#if playerSide}
+  {#if playerSide && !fullscreen}
     <div class="font-mono text-sm text-cyan-400">
       {playerSide === "left"
         ? "You: Left (W/S or Arrows)"
