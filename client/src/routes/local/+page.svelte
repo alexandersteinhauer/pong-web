@@ -284,7 +284,7 @@
 </script>
 
 <div
-  class="flex h-screen flex-col items-center overflow-hidden bg-[#050505] text-white transition-all duration-300 {fullscreen
+  class="flex h-screen flex-col items-center overflow-hidden bg-[#050505] text-white transition-all duration-300 select-none {fullscreen
     ? 'gap-0 p-0'
     : 'gap-6 p-6'}"
 >
