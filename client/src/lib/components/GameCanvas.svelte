@@ -210,7 +210,9 @@
   <!-- Player indicator -->
   {#if playerSide}
     <div class="font-mono text-sm text-cyan-400">
-      {playerSide === "left" ? "You: Left (W/S)" : "You: Right (↑/↓)"}
+      {playerSide === "left"
+        ? "You: Left (W/S or Arrows)"
+        : "You: Right (W/S or Arrows)"}
     </div>
   {/if}
 </div>

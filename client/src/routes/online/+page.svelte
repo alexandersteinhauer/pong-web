@@ -8,7 +8,12 @@
     type ConnectionStatus,
     type GameState,
   } from "$lib/game/transport";
-  import { FIELD_HEIGHT, PADDLE_HEIGHT } from "$lib/game/wasm";
+  import {
+    FIELD_HEIGHT,
+    PADDLE_HEIGHT,
+    FIELD_WIDTH,
+    BALL_SIZE,
+  } from "$lib/game/wasm";
 
   type Mode = "select" | "creating" | "joining" | "playing";
 
@@ -20,6 +25,7 @@
   let transport: PongTransport | null = null;
 
   let side = $state<"left" | "right" | null>(null);
+  let preferredSide = $state<"left" | "right">("left");
   let countdown = $state<number | null>(null);
   let winner = $state<number | null>(null);
   let intentionalDisconnect = false;
@@ -34,6 +40,22 @@
     rightScore: 0,
     waitingForServe: false,
     servingSide: -1,
+  });
+
+  let displayGameState = $derived.by(() => {
+    if (!side || side === preferredSide) {
+      return gameState;
+    }
+    // Mirror state
+    return {
+      ...gameState,
+      leftPaddleY: gameState.rightPaddleY,
+      rightPaddleY: gameState.leftPaddleY,
+      leftScore: gameState.rightScore,
+      rightScore: gameState.leftScore,
+      ballX: FIELD_WIDTH - gameState.ballX - BALL_SIZE,
+      // ballY stays same
+    };
   });
 
   const keys = { up: false, down: false };
@@ -51,24 +73,14 @@
   function handleKeyDown(e: KeyboardEvent) {
     if (mode !== "playing") return;
 
-    if (side === "left") {
-      if (e.key === "w" || e.key === "W") {
-        keys.up = true;
-        e.preventDefault();
-      }
-      if (e.key === "s" || e.key === "S") {
-        keys.down = true;
-        e.preventDefault();
-      }
-    } else if (side === "right") {
-      if (e.key === "ArrowUp") {
-        keys.up = true;
-        e.preventDefault();
-      }
-      if (e.key === "ArrowDown") {
-        keys.down = true;
-        e.preventDefault();
-      }
+    // Unified controls: W/S or ArrowUp/ArrowDown work regardless of side
+    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
+      keys.up = true;
+      e.preventDefault();
+    }
+    if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") {
+      keys.down = true;
+      e.preventDefault();
     }
 
     // Launch ball with space bar
@@ -86,13 +98,9 @@
   }
 
   function handleKeyUp(e: KeyboardEvent) {
-    if (side === "left") {
-      if (e.key === "w" || e.key === "W") keys.up = false;
-      if (e.key === "s" || e.key === "S") keys.down = false;
-    } else if (side === "right") {
-      if (e.key === "ArrowUp") keys.up = false;
-      if (e.key === "ArrowDown") keys.down = false;
-    }
+    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") keys.up = false;
+    if (e.key === "s" || e.key === "S" || e.key === "ArrowDown")
+      keys.down = false;
   }
 
   // Convert screen Y position to game Y coordinate
@@ -375,9 +383,9 @@
 {#if mode === "playing"}
   <!-- Game View -->
   <div
-    class="flex h-screen flex-col items-center gap-6 overflow-hidden bg-black p-6 text-white"
+    class="flex h-screen flex-col items-center gap-6 overflow-hidden bg-[#050505] p-6 text-white"
   >
-    <header class="flex w-full max-w-[800px] shrink-0 items-center gap-6">
+    <header class="flex w-full shrink-0 items-center gap-6">
       <button
         class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-red-500 hover:text-red-500"
         onclick={leaveGame}
@@ -387,14 +395,14 @@
       <h1 class="flex-1 text-xl font-bold text-neutral-500">
         Room: {roomCode}
       </h1>
-      {#if side}
+      {#if preferredSide}
         <span
-          class="rounded px-3 py-1.5 text-xs font-bold tracking-wide uppercase {side ===
+          class="rounded px-3 py-1.5 text-xs font-bold tracking-wide uppercase {preferredSide ===
           'left'
             ? 'border border-cyan-400/30 bg-cyan-400/15 text-cyan-400'
             : 'border border-yellow-400/30 bg-yellow-400/15 text-yellow-400'}"
         >
-          You: {side === "left" ? "Left" : "Right"}
+          You: {preferredSide === "left" ? "Left" : "Right"}
         </span>
       {/if}
     </header>
@@ -407,10 +415,10 @@
       ontouchcancel={handleTouchEnd}
     >
       <GameCanvas
-        {gameState}
+        gameState={displayGameState}
         {overlay}
         countdown={displayCountdown}
-        playerSide={side}
+        playerSide={preferredSide}
         showTouchZones={isTouchDevice && status === "playing"}
       />
     </main>
@@ -426,27 +434,29 @@
           <span class="text-sm text-cyan-400"
             >Touch where you want the paddle</span
           >
-        {:else if side === "left"}
-          <div class="flex gap-2">
-            <kbd
-              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-              >W</kbd
-            >
-            <kbd
-              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-              >S</kbd
-            >
-          </div>
-        {:else if side === "right"}
-          <div class="flex gap-2">
-            <kbd
-              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-              >↑</kbd
-            >
-            <kbd
-              class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
-              >↓</kbd
-            >
+        {:else}
+          <div class="flex items-center gap-8">
+            <div class="flex gap-2">
+              <kbd
+                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                >W</kbd
+              >
+              <kbd
+                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                >S</kbd
+              >
+            </div>
+            <span class="text-xs text-neutral-600">OR</span>
+            <div class="flex gap-2">
+              <kbd
+                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                >↑</kbd
+              >
+              <kbd
+                class="inline-flex min-w-8 items-center justify-center rounded border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm font-bold text-cyan-400"
+                >↓</kbd
+              >
+            </div>
           </div>
         {/if}
       </div>
@@ -455,9 +465,9 @@
 {:else}
   <!-- Lobby View -->
   <div
-    class="flex h-screen flex-col items-center gap-8 overflow-hidden bg-black p-6 text-white"
+    class="flex h-screen flex-col items-center gap-8 overflow-hidden bg-[#050505] p-6 text-white"
   >
-    <header class="flex w-full max-w-[500px] shrink-0 items-center gap-6">
+    <header class="flex w-full shrink-0 items-center gap-6">
       <button
         class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
         onclick={() => goto("/")}
@@ -472,6 +482,33 @@
     >
       {#if mode === "select"}
         <div class="flex max-h-full w-full flex-col gap-6 overflow-y-auto p-2">
+          <!-- Side Selector -->
+          <div class="flex flex-col gap-3">
+            <span class="text-sm text-neutral-500">Preferred Side</span>
+            <div
+              class="flex gap-3 rounded-lg border border-neutral-800 bg-[#0a0a0a] p-1"
+            >
+              <button
+                class="flex-1 cursor-pointer rounded py-2 text-sm font-bold transition-all {preferredSide ===
+                'left'
+                  ? 'bg-neutral-800 text-cyan-400'
+                  : 'text-neutral-500 hover:text-white'}"
+                onclick={() => (preferredSide = "left")}
+              >
+                Left Side
+              </button>
+              <button
+                class="flex-1 cursor-pointer rounded py-2 text-sm font-bold transition-all {preferredSide ===
+                'right'
+                  ? 'bg-neutral-800 text-yellow-400'
+                  : 'text-neutral-500 hover:text-white'}"
+                onclick={() => (preferredSide = "right")}
+              >
+                Right Side
+              </button>
+            </div>
+          </div>
+
           <button
             class="flex shrink-0 cursor-pointer items-center gap-5 rounded-lg border border-neutral-800 bg-[#0a0a0a] px-8 py-6 text-left transition-all hover:-translate-y-0.5 hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(34,211,238,0.3)]"
             onclick={createRoom}

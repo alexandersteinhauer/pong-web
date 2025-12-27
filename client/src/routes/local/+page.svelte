@@ -282,9 +282,9 @@
 </script>
 
 <div
-  class="flex h-screen flex-col items-center gap-6 overflow-hidden bg-black p-6 text-white"
+  class="flex h-screen flex-col items-center gap-6 overflow-hidden bg-[#050505] p-6 text-white"
 >
-  <header class="flex w-full max-w-[800px] shrink-0 items-center gap-6">
+  <header class="flex w-full shrink-0 items-center gap-6">
     <button
       class="cursor-pointer rounded-md border border-neutral-800 bg-[#0a0a0a] px-4 py-2 text-sm text-white transition-all hover:border-cyan-400"
       onclick={() => goto("/")}
