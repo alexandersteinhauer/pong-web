@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install client deps
+        run: cd client && bun i
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PONG_SSH_KEY }}" > ~/.ssh/id_pong
+          echo "${{ secrets.PONG_SSH_PUB }}" > ~/.ssh/id_pong.pub
+          chmod 600 ~/.ssh/id_pong
+          chmod 644 ~/.ssh/id_pong.pub
+          printf '%s\n' \
+            'Host pong' \
+            '	HostName 188.245.105.44' \
+            '	User root' \
+            '	IdentityFile ~/.ssh/id_pong' \
+            > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          ssh-keyscan -H 188.245.105.44 >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: ./deploy.sh
