@@ -36,5 +36,13 @@
     </button>
   </main>
 
-  <footer class="flex-1"></footer>
+  <footer class="flex flex-1 items-end justify-center">
+    <a
+      href="https://github.com/alexandersteinhauer/pong-web"
+      rel="noopener noreferrer"
+      class="text-sm text-neutral-500 transition-colors hover:text-cyan-400"
+    >
+      GitHub
+    </a>
+  </footer>
 </div>
